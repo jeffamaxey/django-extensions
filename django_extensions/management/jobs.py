@@ -56,7 +56,7 @@ def my_import(name):
     try:
         imp = __import__(name)
     except ImportError as err:
-        raise JobError("Failed to import %s with error %s" % (name, err))
+        raise JobError(f"Failed to import {name} with error {err}")
 
     mods = name.split('.')
     if len(mods) > 1:
@@ -86,15 +86,17 @@ def find_job_module(app_name, when=None):
 
 
 def import_job(app_name, name, when=None):
-    jobmodule = "%s.jobs.%s%s" % (app_name, when and "%s." % when or "", name)
+    jobmodule = f'{app_name}.jobs.{when and f"{when}." or ""}{name}'
     job_mod = my_import(jobmodule)
     # todo: more friendly message for AttributeError if job_mod does not exist
     try:
         job = job_mod.Job
     except AttributeError:
-        raise JobError("Job module %s does not contain class instance named 'Job'" % jobmodule)
-    if when and not (job.when == when or job.when is None):
-        raise JobError("Job %s is not a %s job." % (jobmodule, when))
+        raise JobError(
+            f"Job module {jobmodule} does not contain class instance named 'Job'"
+        )
+    if when and job.when != when and job.when is not None:
+        raise JobError(f"Job {jobmodule} is not a {when} job.")
     return job
 
 
@@ -122,7 +124,7 @@ def get_jobs(when=None, only_scheduled=False):
                 path = find_job_module(app_name, subdir)
                 for name in find_jobs(path):
                     if (app_name, name) in _jobs:
-                        raise JobError("Duplicate job %s" % name)
+                        raise JobError(f"Duplicate job {name}")
                     job = import_job(app_name, name, subdir)
                     if only_scheduled and job.when is None:
                         # only include jobs which are scheduled
@@ -142,11 +144,10 @@ def get_job(app_name, job_name):
     jobs = get_jobs()
     if app_name:
         return jobs[(app_name, job_name)]
-    else:
-        for a, j in jobs.keys():
-            if j == job_name:
-                return jobs[(a, j)]
-        raise KeyError("Job not found: %s" % job_name)
+    for a, j in jobs.keys():
+        if j == job_name:
+            return jobs[(a, j)]
+    raise KeyError(f"Job not found: {job_name}")
 
 
 def print_jobs(when=None, only_scheduled=False, show_when=True, show_appname=False, show_header=True):
@@ -178,5 +179,5 @@ def print_jobs(when=None, only_scheduled=False, show_when=True, show_appname=Fal
         line += name_spacer % job_name
         if show_when:
             line += " - " + when_spacer % (job.when and job.when or "")
-        line += " - " + job.help
+        line += f" - {job.help}"
         print(line)

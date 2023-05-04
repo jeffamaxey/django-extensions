@@ -275,16 +275,20 @@ class MigrationTest(TestCase):
             'autoslugfield': AutoSlugField(populate_from='otherfield'),
         }
 
-        migration = type(str("Migration"), (migrations.Migration,), {
-            "operations": [
-                migrations.CreateModel(
-                    "MyModel",
-                    tuple(fields.items()),
-                    {'populate_from': 'otherfield'},
-                    (models.Model,)
-                ),
-            ],
-        })
+        migration = type(
+            "Migration",
+            (migrations.Migration,),
+            {
+                "operations": [
+                    migrations.CreateModel(
+                        "MyModel",
+                        tuple(fields.items()),
+                        {'populate_from': 'otherfield'},
+                        (models.Model,),
+                    ),
+                ],
+            },
+        )
         writer = MigrationWriter(migration)
         output = writer.as_string()
 

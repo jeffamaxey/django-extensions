@@ -270,13 +270,7 @@ class SQLDiff:
         cursor.execute(query, param)
         fieldnames = [name[0] for name in cursor.description]
         fieldnames = self.format_field_names(fieldnames)
-        result = []
-        for row in cursor.fetchall():
-            rowset = []
-            for field in zip(fieldnames, row):
-                rowset.append(field)
-            result.append(dict(rowset))
-        return result
+        return [dict(list(zip(fieldnames, row))) for row in cursor.fetchall()]
 
     def get_field_model_type(self, field):
         return field.db_type(connection=connection)
@@ -301,7 +295,10 @@ class SQLDiff:
                     key = (self.differences[-1][:2], description[:2])
                     if key not in self.unknown_db_fields:
                         self.unknown_db_fields[key] = 1
-                        self.add_difference('comment', "Unknown database type for field '%s' (%s)" % (description[0], type_code))
+                        self.add_difference(
+                            'comment',
+                            f"Unknown database type for field '{description[0]}' ({type_code})",
+                        )
                     return None
 
         if callable(reverse_type):
@@ -310,7 +307,7 @@ class SQLDiff:
         kwargs = {}
 
         if isinstance(reverse_type, dict):
-            kwargs.update(reverse_type['kwargs'])
+            kwargs |= reverse_type['kwargs']
             reverse_type = reverse_type['name']
 
         if type_code == 16946 and field and getattr(field, 'geom_type', None) == 'POINT':
@@ -342,7 +339,7 @@ class SQLDiff:
             reverse_type, geo_params = self.introspection.get_geometry_type(table_name, geo_col)
             if geo_params:
                 kwargs.update(geo_params)
-            reverse_type = 'django.contrib.gis.db.models.fields.%s' % reverse_type
+            reverse_type = f'django.contrib.gis.db.models.fields.{reverse_type}'
 
         extra_kwargs = self.get_field_db_type_kwargs(kwargs, description, field, table_name, reverse_type)
         kwargs.update(extra_kwargs)
@@ -354,7 +351,7 @@ class SQLDiff:
         if not tablespace:
             tablespace = "public"
         if (tablespace, table_name, field.column) in self.unsigned and self.unsigned_suffix not in field_db_type:
-            field_db_type = '%s %s' % (field_db_type, self.unsigned_suffix)
+            field_db_type = f'{field_db_type} {self.unsigned_suffix}'
 
         return field_db_type
 
@@ -382,12 +379,10 @@ class SQLDiff:
         return field_type
 
     def expand_together(self, together, meta):
-        new_together = []
-        for fields in normalize_together(together):
-            new_together.append(
-                tuple(meta.get_field(field).attname for field in fields)
-            )
-        return new_together
+        return [
+            tuple(meta.get_field(field).attname for field in fields)
+            for fields in normalize_together(together)
+        ]
 
     def find_unique_missing_in_db(self, meta, table_indexes, table_constraints, table_name, skip_list=None):
         schema_editor = connection.SchemaEditorClass(connection)
@@ -404,12 +399,29 @@ class SQLDiff:
 
                 index_name = schema_editor._create_index_name(table_name, [attname])
 
-                self.add_difference('unique-missing-in-db', table_name, [attname], index_name + "_uniq")
+                self.add_difference(
+                    'unique-missing-in-db',
+                    table_name,
+                    [attname],
+                    f"{index_name}_uniq",
+                )
                 db_type = field.db_type(connection=connection)
                 if db_type.startswith('varchar'):
-                    self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' varchar_pattern_ops')
+                    self.add_difference(
+                        'index-missing-in-db',
+                        table_name,
+                        [attname],
+                        f'{index_name}_like',
+                        ' varchar_pattern_ops',
+                    )
                 if db_type.startswith('text'):
-                    self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' text_pattern_ops')
+                    self.add_difference(
+                        'index-missing-in-db',
+                        table_name,
+                        [attname],
+                        f'{index_name}_like',
+                        ' text_pattern_ops',
+                    )
 
         unique_together = self.expand_together(meta.unique_together, meta)
         db_unique_columns = normalize_together([v['columns'] for v in table_constraints.values() if v['unique'] and not v['index']])
@@ -423,7 +435,12 @@ class SQLDiff:
 
             index_name = schema_editor._create_index_name(table_name, unique_columns)
 
-            self.add_difference('unique-missing-in-db', table_name, unique_columns, index_name + "_uniq")
+            self.add_difference(
+                'unique-missing-in-db',
+                table_name,
+                unique_columns,
+                f"{index_name}_uniq",
+            )
 
     def find_unique_missing_in_model(self, meta, table_indexes, table_constraints, table_name):
         fields = dict([(field.column, field) for field in all_local_fields(meta)])
@@ -443,9 +460,8 @@ class SQLDiff:
                     pass
                 elif field.unique:
                     continue
-            else:
-                if tuple(columns) in unique_together:
-                    continue
+            elif tuple(columns) in unique_together:
+                continue
 
             self.add_difference('unique-missing-in-model', table_name, constraint_name)
 
@@ -459,9 +475,21 @@ class SQLDiff:
                     self.add_difference('index-missing-in-db', table_name, [attname], index_name, '')
                     db_type = field.db_type(connection=connection)
                     if db_type.startswith('varchar'):
-                        self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' varchar_pattern_ops')
+                        self.add_difference(
+                            'index-missing-in-db',
+                            table_name,
+                            [attname],
+                            f'{index_name}_like',
+                            ' varchar_pattern_ops',
+                        )
                     if db_type.startswith('text'):
-                        self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' text_pattern_ops')
+                        self.add_difference(
+                            'index-missing-in-db',
+                            table_name,
+                            [attname],
+                            f'{index_name}_like',
+                            ' text_pattern_ops',
+                        )
 
         index_together = self.expand_together(meta.index_together, meta)
         db_index_together = normalize_together([v['columns'] for v in table_constraints.values() if v['index'] and not v['unique']])
@@ -469,7 +497,9 @@ class SQLDiff:
             if columns in db_index_together:
                 continue
             index_name = schema_editor._create_index_name(table_name, columns)
-            self.add_difference('index-missing-in-db', table_name, columns, index_name + "_idx", '')
+            self.add_difference(
+                'index-missing-in-db', table_name, columns, f"{index_name}_idx", ''
+            )
 
         for index in meta.indexes:
             if index.name not in table_constraints:
@@ -489,15 +519,13 @@ class SQLDiff:
 
             columns = constraint['columns']
             field = fields.get(columns[0])
-            if (constraint['unique'] and constraint['index']) or field is None:
+            if constraint['unique'] or field is None:
                 # unique indexes do not exist in django ? only unique constraints
                 pass
             elif len(columns) == 1:
                 if constraint['primary_key'] and field.primary_key:
                     continue
                 if constraint['foreign_key'] and isinstance(field, models.ForeignKey) and field.db_constraint:
-                    continue
-                if constraint['unique'] and field.unique:
                     continue
                 if constraint['index'] and constraint['type'] == 'idx' and constraint.get('orders') and field.unique:
                     # django automatically creates a _like varchar_pattern_ops/text_pattern_ops index see https://code.djangoproject.com/ticket/12234
@@ -509,9 +537,8 @@ class SQLDiff:
                     continue
                 if getattr(field, 'spatial_index', False):
                     continue
-            else:
-                if constraint['index'] and tuple(columns) in index_together:
-                    continue
+            elif constraint['index'] and tuple(columns) in index_together:
+                continue
 
             self.add_difference('index-missing-in-model', table_name, constraint_name)
 
@@ -533,7 +560,7 @@ class SQLDiff:
                     op = 'field-missing-in-db'
                 field_output.append(field.db_type(connection=connection))
                 if self.options['include_defaults'] and field.has_default():
-                    field_output.append('DEFAULT %s' % field.get_prep_value(field.get_default()))
+                    field_output.append(f'DEFAULT {field.get_prep_value(field.get_default())}')
                 if not field.null:
                     field_output.append('NOT NULL')
                 self.add_difference(op, table_name, field_name, *field_output)
@@ -553,7 +580,7 @@ class SQLDiff:
             if func:
                 model_type, db_type = func(field, description, model_type, db_type)
 
-            if not self.strip_parameters(db_type) == self.strip_parameters(model_type):
+            if self.strip_parameters(db_type) != self.strip_parameters(model_type):
                 self.add_difference('field-type-differ', table_name, field.name, model_type, db_type)
 
     def find_field_parameter_differ(self, meta, table_description, table_name, func=None):
@@ -566,7 +593,7 @@ class SQLDiff:
             model_type = self.get_field_model_type(field)
             db_type = self.get_field_db_type(description, field, table_name)
 
-            if not self.strip_parameters(model_type) == self.strip_parameters(db_type):
+            if self.strip_parameters(model_type) != self.strip_parameters(db_type):
                 continue
 
             # use callback function if defined
@@ -580,7 +607,7 @@ class SQLDiff:
             else:
                 db_check = None
 
-            if not model_type == db_type or not model_check == db_check:
+            if model_type != db_type or model_check != db_check:
                 self.add_difference('field-parameter-differ', table_name, field.name, model_type, db_type)
 
     def find_field_notnull_differ(self, meta, table_description, table_name):
@@ -638,7 +665,7 @@ class SQLDiff:
             try:
                 table_description = self.introspection.get_table_description(self.cursor, table_name)
             except Exception as e:
-                self.add_difference('error', 'unable to introspect table: %s' % str(e).strip())
+                self.add_difference('error', f'unable to introspect table: {str(e).strip()}')
                 transaction.rollback()  # reset transaction
                 continue
 
@@ -678,7 +705,9 @@ class SQLDiff:
             self.find_field_parameter_differ(meta, table_description, table_name)
             # 9) find: 'field-notnull'
             self.find_field_notnull_differ(meta, table_description, table_name)
-        self.has_differences = max([len(diffs) for _app_label, _model_name, diffs in self.differences])
+        self.has_differences = max(
+            len(diffs) for _app_label, _model_name, diffs in self.differences
+        )
 
     def print_diff(self, style=no_style()):
         """ Print differences to stdout """
@@ -701,24 +730,31 @@ class SQLDiff:
             if not diffs:
                 continue
             if not self.dense and app_label and cur_app_label != app_label:
-                self.stdout.write("%s %s" % (style.NOTICE("+ Application:"), style.SQL_TABLE(app_label)))
+                self.stdout.write(
+                    f'{style.NOTICE("+ Application:")} {style.SQL_TABLE(app_label)}'
+                )
                 cur_app_label = app_label
             if not self.dense and model_name:
-                self.stdout.write("%s %s" % (style.NOTICE("|-+ Differences for model:"), style.SQL_TABLE(model_name)))
+                self.stdout.write(
+                    f'{style.NOTICE("|-+ Differences for model:")} {style.SQL_TABLE(model_name)}'
+                )
             for diff in diffs:
                 diff_type, diff_args = diff
-                text = self.DIFF_TEXTS[diff_type] % dict(
-                    (str(i), style.SQL_TABLE(', '.join(e) if isinstance(e, (list, tuple)) else e))
+                text = self.DIFF_TEXTS[diff_type] % {
+                    str(i): style.SQL_TABLE(
+                        ', '.join(e) if isinstance(e, (list, tuple)) else e
+                    )
                     for i, e in enumerate(diff_args)
-                )
+                }
                 text = "'".join(i % 2 == 0 and style.ERROR(e) or e for i, e in enumerate(text.split("'")))
                 if not self.dense:
-                    self.stdout.write("%s %s" % (style.NOTICE("|--+"), text))
+                    self.stdout.write(f'{style.NOTICE("|--+")} {text}')
+                elif app_label:
+                    self.stdout.write(
+                        f"""{style.NOTICE("App")} {style.SQL_TABLE(app_label)} {style.NOTICE('Model')} {style.SQL_TABLE(model_name)} {text}"""
+                    )
                 else:
-                    if app_label:
-                        self.stdout.write("%s %s %s %s %s" % (style.NOTICE("App"), style.SQL_TABLE(app_label), style.NOTICE('Model'), style.SQL_TABLE(model_name), text))
-                    else:
-                        self.stdout.write(text)
+                    self.stdout.write(text)
 
     def print_diff_sql(self, style):
         if not self.can_detect_notnull_differ:
@@ -726,20 +762,21 @@ class SQLDiff:
             self.stdout.write("")
 
         cur_app_label = None
-        qn = connection.ops.quote_name
-        if not self.has_differences:
-            if not self.dense:
-                self.stdout.write(style.SQL_KEYWORD("-- No differences"))
-        else:
+        if self.has_differences:
             self.stdout.write(style.SQL_KEYWORD("BEGIN;"))
+            qn = connection.ops.quote_name
             for app_label, model_name, diffs in self.differences:
                 if not diffs:
                     continue
                 if not self.dense and cur_app_label != app_label:
-                    self.stdout.write(style.NOTICE("-- Application: %s" % style.SQL_TABLE(app_label)))
+                    self.stdout.write(
+                        style.NOTICE(
+                            f"-- Application: {style.SQL_TABLE(app_label)}"
+                        )
+                    )
                     cur_app_label = app_label
                 if not self.dense and model_name:
-                    self.stdout.write(style.NOTICE("-- Model: %s" % style.SQL_TABLE(model_name)))
+                    self.stdout.write(style.NOTICE(f"-- Model: {style.SQL_TABLE(model_name)}"))
                 for diff in diffs:
                     diff_type, diff_args = diff
                     text = self.DIFF_SQL[diff_type](style, qn, diff_args)
@@ -747,6 +784,9 @@ class SQLDiff:
                         text = text.replace("\n\t", " ")
                     self.stdout.write(text)
             self.stdout.write(style.SQL_KEYWORD("COMMIT;"))
+
+        elif not self.dense:
+            self.stdout.write(style.SQL_KEYWORD("-- No differences"))
 
 
 class GenericSQLDiff(SQLDiff):
@@ -827,9 +867,11 @@ class MySQLDiff(SQLDiff):
 
             # They like to call bools various integer types and introspection makes that a integer
             # just convert them all to bools
-            if self.strip_parameters(field_type) == 'bool':
-                if db_type == 'integer':
-                    db_type = 'bool'
+            if (
+                self.strip_parameters(field_type) == 'bool'
+                and db_type == 'integer'
+            ):
+                db_type = 'bool'
 
             if (table_name, field.column) in self.auto_increment and 'AUTO_INCREMENT' not in db_type:
                 db_type += ' AUTO_INCREMENT'
@@ -873,10 +915,10 @@ class MySQLDiff(SQLDiff):
                     continue
                 if getattr(field, 'spatial_index', False):
                     continue
-            else:
-                if constraint['index'] and tuple(columns) in index_together:
+            elif constraint['index']:
+                if tuple(columns) in index_together:
                     continue
-                if constraint['index'] and constraint['unique'] and tuple(columns) in unique_together:
+                if constraint['unique'] and tuple(columns) in unique_together:
                     continue
 
             self.add_difference('index-missing-in-model', table_name, constraint_name)
@@ -897,12 +939,29 @@ class MySQLDiff(SQLDiff):
 
                 index_name = schema_editor._create_index_name(table_name, [attname])
 
-                self.add_difference('unique-missing-in-db', table_name, [attname], index_name + "_uniq")
+                self.add_difference(
+                    'unique-missing-in-db',
+                    table_name,
+                    [attname],
+                    f"{index_name}_uniq",
+                )
                 db_type = field.db_type(connection=connection)
                 if db_type.startswith('varchar'):
-                    self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' varchar_pattern_ops')
+                    self.add_difference(
+                        'index-missing-in-db',
+                        table_name,
+                        [attname],
+                        f'{index_name}_like',
+                        ' varchar_pattern_ops',
+                    )
                 if db_type.startswith('text'):
-                    self.add_difference('index-missing-in-db', table_name, [attname], index_name + '_like', ' text_pattern_ops')
+                    self.add_difference(
+                        'index-missing-in-db',
+                        table_name,
+                        [attname],
+                        f'{index_name}_like',
+                        ' text_pattern_ops',
+                    )
 
         unique_together = self.expand_together(meta.unique_together, meta)
 
@@ -917,7 +976,12 @@ class MySQLDiff(SQLDiff):
                 continue
 
             index_name = schema_editor._create_index_name(table_name, unique_columns)
-            self.add_difference('unique-missing-in-db', table_name, unique_columns, index_name + "_uniq")
+            self.add_difference(
+                'unique-missing-in-db',
+                table_name,
+                unique_columns,
+                f"{index_name}_uniq",
+            )
 
 
 class SqliteSQLDiff(SQLDiff):
@@ -925,12 +989,12 @@ class SqliteSQLDiff(SQLDiff):
     can_detect_unsigned_differ = False
 
     def load_null(self):
+        # sqlite does not support tablespaces
+        tablespace = "public"
         for table_name in self.db_tables:
-            # sqlite does not support tablespaces
-            tablespace = "public"
             # index, column_name, column_type, nullable, default_value
             # see: http://www.sqlite.org/pragma.html#pragma_table_info
-            for table_info in self.sql_to_dict("PRAGMA table_info('%s');" % table_name, []):
+            for table_info in self.sql_to_dict(f"PRAGMA table_info('{table_name}');", []):
                 key = (tablespace, table_name, table_info['name'])
                 self.null[key] = not table_info['notnull']
 
@@ -1029,8 +1093,8 @@ class PostgresqlSQLDiff(SQLDiff):
 
     def load_constraints(self):
         for dct in self.sql_to_dict(self.SQL_LOAD_CONSTRAINTS, []):
-            key = (dct['nspname'], dct['relname'], dct['attname'])
             if 'CHECK' in dct['pg_get_constraintdef']:
+                key = (dct['nspname'], dct['relname'], dct['attname'])
                 self.check_constraints[key] = dct
 
     def get_data_type_arrayfield(self, base_field):
@@ -1221,13 +1285,14 @@ class PostgresqlSQLDiff(SQLDiff):
                 if tablespace == "":
                     tablespace = "public"
                 attname = field.db_column or field.attname
-                check_constraint = self.check_constraints.get((tablespace, table_name, attname), {}).get('pg_get_constraintdef', None)
-                if check_constraint:
+                if check_constraint := self.check_constraints.get(
+                    (tablespace, table_name, attname), {}
+                ).get('pg_get_constraintdef', None):
                     check_constraint = check_constraint.replace("((", "(")
                     check_constraint = check_constraint.replace("))", ")")
                     check_constraint = '("'.join([')' in e and '" '.join(p.strip('"') for p in e.split(" ", 1)) or e for e in check_constraint.split("(")])
                     # TODO: might be more then one constraint in definition ?
-                    db_type += ' ' + check_constraint
+                    db_type += f' {check_constraint}'
         return db_type
 
     def get_field_db_type_lookup(self, type_code):
@@ -1377,7 +1442,7 @@ Edit your settings file and change DATABASE_ENGINE to something like 'postgresql
             stderr = getattr(self, 'stderr', None)
             if not stderr:
                 stderr = OutputWrapper(sys.stderr, self.style.ERROR)
-            stderr.write('%s: %s' % (e.__class__.__name__, e))
+            stderr.write(f'{e.__class__.__name__}: {e}')
             sys.exit(2)
 
     def run_from_argv(self, argv):

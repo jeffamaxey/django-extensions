@@ -25,12 +25,12 @@ class SubclassesFinder:
             self.base_classes.append(element)
 
     def _should_be_imported(self, candidate_to_import):  # type: (Tuple[str, type]) -> bool
-        for base_class in self.base_classes:
-            if issubclass(candidate_to_import[1], base_class):
-                return True
-        return False
+        return any(
+            issubclass(candidate_to_import[1], base_class)
+            for base_class in self.base_classes
+        )
 
-    def collect_subclasses(self):  # type: () -> Dict[str, List[Tuple[str, str]]]
+    def collect_subclasses(self):    # type: () -> Dict[str, List[Tuple[str, str]]]
         """
         Collect all subclasses of user-defined base classes from project.
         :return: Dictionary from module name to list of tuples.
@@ -40,8 +40,9 @@ class SubclassesFinder:
         """
         result = {}  # type: Dict[str, List[Tuple[str, str]]]
         for loader, module_name, is_pkg in walk_packages(path=[settings.BASE_DIR]):
-            subclasses_from_module = self._collect_classes_from_module(module_name)
-            if subclasses_from_module:
+            if subclasses_from_module := self._collect_classes_from_module(
+                module_name
+            ):
                 result[module_name] = subclasses_from_module
         return result
 

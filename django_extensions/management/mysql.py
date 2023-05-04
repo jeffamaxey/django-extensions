@@ -11,8 +11,7 @@ def parse_mysql_cnf(dbinfo):
     Settings that are missing will return ''
     returns (user, password, database_name, database_host, database_port)
     """
-    read_default_file = dbinfo.get('OPTIONS', {}).get('read_default_file')
-    if read_default_file:
+    if read_default_file := dbinfo.get('OPTIONS', {}).get('read_default_file'):
         config = configparser.RawConfigParser({
             'user': '',
             'password': '',

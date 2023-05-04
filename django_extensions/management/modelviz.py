@@ -96,9 +96,8 @@ class ModelGraph:
         for graph in self.graphs:
             for model in graph['models']:
                 for relation in model['relations']:
-                    if relation is not None:
-                        if relation['target'] in nodes:
-                            relation['needs_node'] = False
+                    if relation is not None and relation['target'] in nodes:
+                        relation['needs_node'] = False
 
     def get_graph_data(self, as_json=False):
         now = datetime.datetime.now()
@@ -165,7 +164,7 @@ class ModelGraph:
             related_query_name = field.related_query_name()
             if self.verbose_names and related_query_name.islower():
                 related_query_name = related_query_name.replace('_', ' ').capitalize()
-            label = u'{} ({})'.format(label, force_str(related_query_name))
+            label = f'{label} ({force_str(related_query_name)})'
         if self.hide_edge_labels:
             label = ''
 
@@ -195,25 +194,28 @@ class ModelGraph:
                 abstract_model for abstract_model in appmodel.__bases__
                 if hasattr(abstract_model, '_meta') and abstract_model._meta.abstract
             ]
-        abstract_models = list(set(abstract_models))  # remove duplicates
-        return abstract_models
+        return list(set(abstract_models))
 
     def get_app_context(self, app):
-        return Context({
-            'name': '"%s"' % app.name,
-            'app_name': "%s" % app.name,
-            'cluster_app_name': "cluster_%s" % app.name.replace(".", "_"),
-            'models': []
-        })
+        return Context(
+            {
+                'name': f'"{app.name}"',
+                'app_name': f"{app.name}",
+                'cluster_app_name': f'cluster_{app.name.replace(".", "_")}',
+                'models': [],
+            }
+        )
 
     def get_appmodel_attributes(self, appmodel):
-        if self.relations_as_fields:
-            attributes = [field for field in appmodel._meta.local_fields]
-        else:
-            # Find all the 'real' attributes. Relations are depicted as graph edges instead of attributes
-            attributes = [field for field in appmodel._meta.local_fields if not
-                          isinstance(field, RelatedField)]
-        return attributes
+        return (
+            list(appmodel._meta.local_fields)
+            if self.relations_as_fields
+            else [
+                field
+                for field in appmodel._meta.local_fields
+                if not isinstance(field, RelatedField)
+            ]
+        )
 
     def get_appmodel_abstracts(self, appmodel):
         return [
@@ -266,8 +268,7 @@ class ModelGraph:
         }
 
     def get_models(self, app):
-        appmodels = list(app.get_models())
-        return appmodels
+        return list(app.get_models())
 
     def get_relation_context(self, target_model, field, label, extras):
         return {
@@ -345,9 +346,7 @@ class ModelGraph:
             relation = self.add_relation(
                 field,
                 newmodel,
-                '[arrowhead=none, arrowtail={}, dir=both]'.format(
-                    self.arrow_shape
-                ),
+                f'[arrowhead=none, arrowtail={self.arrow_shape}, dir=both]',
             )
         else:
             relation = None
@@ -365,9 +364,7 @@ class ModelGraph:
                 relation = self.add_relation(
                     field,
                     newmodel,
-                    '[arrowhead={} arrowtail={}, dir=both]'.format(
-                        self.arrow_shape, self.arrow_shape
-                    ),
+                    f'[arrowhead={self.arrow_shape} arrowtail={self.arrow_shape}, dir=both]',
                 )
         elif isinstance(field, GenericRelation):
             relation = self.add_relation(field, newmodel, mark_safe('[style="dotted", arrowhead=normal, arrowtail=normal, dir=both]'))
@@ -397,13 +394,13 @@ class ModelGraph:
         # Check against include list.
         if self.include_models:
             for model_pattern in self.include_models:
-                model_pattern = '^%s$' % model_pattern.replace('*', '.*')
+                model_pattern = f"^{model_pattern.replace('*', '.*')}$"
                 if re.search(model_pattern, model_name):
                     return True
         # Check against exclude list.
         if self.exclude_models:
             for model_pattern in self.exclude_models:
-                model_pattern = '^%s$' % model_pattern.replace('*', '.*')
+                model_pattern = f"^{model_pattern.replace('*', '.*')}$"
                 if re.search(model_pattern, model_name):
                     return False
         # Return `True` if `include_models` is falsey, otherwise return `False`.
@@ -411,9 +408,12 @@ class ModelGraph:
 
     def skip_field(self, field):
         if self.exclude_columns:
-            if self.verbose_names and field.verbose_name:
-                if field.verbose_name in self.exclude_columns:
-                    return True
+            if (
+                self.verbose_names
+                and field.verbose_name
+                and field.verbose_name in self.exclude_columns
+            ):
+                return True
             if field.name in self.exclude_columns:
                 return True
         return False
@@ -429,9 +429,7 @@ def generate_dot(graph_data, template='django_extensions/graph_models/digraph.do
                         "Please, check the settings.")
 
     c = Context(graph_data).flatten()
-    dot = template.render(c)
-
-    return dot
+    return template.render(c)
 
 
 def generate_graph_data(*args, **kwargs):

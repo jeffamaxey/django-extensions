@@ -113,10 +113,7 @@ class AdminApp(UnicodeMixin):
             admin_model_names.append(admin_model.name)
 
     def __repr__(self):
-        return '<%s[%s]>' % (
-            self.__class__.__name__,
-            self.app.name,
-        )
+        return f'<{self.__class__.__name__}[{self.app.name}]>'
 
 
 class AdminModel(UnicodeMixin):
@@ -148,10 +145,7 @@ class AdminModel(UnicodeMixin):
         self.prepopulated_field_names = prepopulated_field_names
 
     def __repr__(self):
-        return '<%s[%s]>' % (
-            self.__class__.__name__,
-            self.name,
-        )
+        return f'<{self.__class__.__name__}[{self.name}]>'
 
     @property
     def name(self):
@@ -171,8 +165,7 @@ class AdminModel(UnicodeMixin):
     def _process_fields(self, meta):
         parent_fields = meta.parents.values()
         for field in meta.fields:
-            name = self._process_field(field, parent_fields)
-            if name:
+            if name := self._process_field(field, parent_fields):
                 yield name
 
     def _process_foreign_key(self, field):
@@ -191,9 +184,6 @@ class AdminModel(UnicodeMixin):
 
         elif related_count < list_filter_threshold:
             self.list_filter.append(field.name)
-
-        else:  # pragma: no cover
-            pass  # Do nothing :)
 
     def _process_field(self, field, parent_fields):
         if field in parent_fields:
@@ -232,26 +222,23 @@ class AdminModel(UnicodeMixin):
         )
 
     def _yield_dict(self, key, value):
-        row_parts = []
         row = self._yield_string(key, value)
         if len(row) > MAX_LINE_WIDTH:
-            row_parts.append(self._yield_string(key, '{', str))
-            for k, v in value.items():
-                row_parts.append('%s%r: %r' % (2 * INDENT_WIDTH * ' ', k, v))
-
+            row_parts = [self._yield_string(key, '{', str)]
+            row_parts.extend(
+                '%s%r: %r' % (2 * INDENT_WIDTH * ' ', k, v)
+                for k, v in value.items()
+            )
             row_parts.append(INDENT_WIDTH * ' ' + '}')
             row = '\n'.join(row_parts)
 
         return row
 
     def _yield_tuple(self, key, value):
-        row_parts = []
         row = self._yield_string(key, value)
         if len(row) > MAX_LINE_WIDTH:
-            row_parts.append(self._yield_string(key, '(', str))
-            for v in value:
-                row_parts.append(2 * INDENT_WIDTH * ' ' + repr(v) + ',')
-
+            row_parts = [self._yield_string(key, '(', str)]
+            row_parts.extend(2 * INDENT_WIDTH * ' ' + repr(v) + ',' for v in value)
             row_parts.append(INDENT_WIDTH * ' ' + ')')
             row = '\n'.join(row_parts)
 
@@ -260,8 +247,7 @@ class AdminModel(UnicodeMixin):
     def _unicode_generator(self):
         self._process()
         for key in self.PRINTABLE_PROPERTIES:
-            value = getattr(self, key)
-            if value:
+            if value := getattr(self, key):
                 yield self._yield_value(key, value)
 
     def _process(self):
@@ -279,12 +265,7 @@ class AdminModel(UnicodeMixin):
             k, vs = k.split('=', 1)
             vs = vs.split(',')
             if k in field_names:
-                incomplete = False
-                for v in vs:
-                    if v not in field_names:
-                        incomplete = True
-                        break
-
+                incomplete = any(v not in field_names for v in vs)
                 if not incomplete:
                     self.prepopulated_fields[k] = vs
 
@@ -337,11 +318,8 @@ class Command(LabelCommand):
             self.stderr.write('Available apps:')
             app_labels = [app.label for app in apps.get_app_configs()]
             for label in sorted(app_labels):
-                self.stderr.write('    %s' % label)
+                self.stderr.write(f'    {label}')
             return
 
-        model_res = []
-        for arg in options['model_name']:
-            model_res.append(re.compile(arg, re.IGNORECASE))
-
+        model_res = [re.compile(arg, re.IGNORECASE) for arg in options['model_name']]
         self.stdout.write(AdminApp(app, model_res, **options).__str__())

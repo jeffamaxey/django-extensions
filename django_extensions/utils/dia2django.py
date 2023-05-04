@@ -46,10 +46,7 @@ def find_index(fks, id_):
     the id of the class in a dia diagram.  When not present returns None, else
     it returns the position of the class with id on fks
     """
-    for i, _ in fks.items():
-        if fks[i][1] == id_:
-            return i
-    return None
+    return next((i for i, _ in fks.items() if fks[i][1] == id_), None)
 
 
 def addparentstofks(rels, fks):

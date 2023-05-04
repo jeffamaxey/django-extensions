@@ -38,8 +38,7 @@ class Command(BaseCommand):
         try:
             site = Site.objects.get(pk=settings.SITE_ID)
         except Site.DoesNotExist:
-            raise CommandError("Default site with pk=%s does not exist" %
-                               settings.SITE_ID)
+            raise CommandError(f"Default site with pk={settings.SITE_ID} does not exist")
         else:
             name = options["site_name"]
             domain = options["site_domain"]

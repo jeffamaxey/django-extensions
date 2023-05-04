@@ -70,15 +70,12 @@ def pygments_css():
 
 def generate_pygments_css(path=None):
     path = os.path.join(path or os.getcwd(), 'pygments.css')
-    f = open(path, 'w')
-    f.write(pygments_css())
-    f.close()
+    with open(path, 'w') as f:
+        f.write(pygments_css())
 
 
 def get_lexer(value, arg):
-    if arg is None:
-        return guess_lexer(value)
-    return get_lexer_by_name(arg)
+    return guess_lexer(value) if arg is None else get_lexer_by_name(arg)
 
 
 @pygments_required

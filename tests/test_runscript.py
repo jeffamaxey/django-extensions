@@ -77,8 +77,8 @@ class InvalidImportScriptsTests(RunScriptTests):
         self.assertEqual(cmd.last_exit_code, 1)
 
     def test_prints_import_error_on_script_with_invalid_imports_reliably(self):
-        cmd = self.get_command()
         if hasattr(importlib, 'util') and hasattr(importlib.util, 'find_spec'):
+            cmd = self.get_command()
             with self.settings(BASE_DIR=os.path.dirname(os.path.abspath(__file__))):
                 with self.assertRaises(CommandError):
                     call_command(cmd, 'invalid_import_script')

@@ -21,8 +21,10 @@ class CleanPycTests(TestCase):
     def _find_pyc(self, path):
         pyc_glob = []
         for root, dirnames, filenames in os.walk(path):
-            for filename in fnmatch.filter(filenames, '*.pyc'):
-                pyc_glob.append(os.path.join(root, filename))
+            pyc_glob.extend(
+                os.path.join(root, filename)
+                for filename in fnmatch.filter(filenames, '*.pyc')
+            )
         return pyc_glob
 
     def test_removes_pyc_files(self):
@@ -54,7 +56,7 @@ class CleanPycTests(TestCase):
         # Create some fake .pyo files since we can't force them to be created.
         pyo_glob = []
         for fn in pyc_glob:
-            pyo = '%s.pyo' % os.path.splitext(fn)[0]
+            pyo = f'{os.path.splitext(fn)[0]}.pyo'
             shutil.copyfile(fn, pyo)
             pyo_glob.append(pyo)
         call_command('clean_pyc', verbosity=2, path=project_root, optimize=True, stdout=out)

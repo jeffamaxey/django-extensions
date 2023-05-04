@@ -35,7 +35,7 @@ class Command(BaseCommand):
         if not project_root:
             raise CommandError("No --path specified and settings.py does not contain BASE_DIR")
 
-        exts = options["optimize"] and "*.py[co]" or "*.pyc"
+        exts = "*.py[co]" if options["optimize"] else "*.pyc"
 
         for root, dirs, filenames in os.walk(project_root):
             for filename in fnmatch.filter(filenames, exts):

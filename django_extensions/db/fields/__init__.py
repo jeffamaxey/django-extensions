@@ -36,7 +36,7 @@ class UniqueFieldMixin:
 
     def check_is_bool(self, attrname):
         if not isinstance(getattr(self, attrname), bool):
-            raise ValueError("'{}' argument must be True or False".format(attrname))
+            raise ValueError(f"'{attrname}' argument must be True or False")
 
     @staticmethod
     def _get_fields(model_cls):
@@ -67,8 +67,7 @@ class UniqueFieldMixin:
 
         # for support django 2.2+
         query = Q()
-        constraints = getattr(model_instance._meta, 'constraints', None)
-        if constraints:
+        if constraints := getattr(model_instance._meta, 'constraints', None):
             unique_constraints = filter(
                 lambda c: isinstance(c, UniqueConstraint), constraints
             )
@@ -161,7 +160,9 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
                 populate_from = (populate_from, )
 
             if not all(isinstance(e, str) for e in populate_from):
-                raise TypeError("'populate_from' must be str or list[str] or tuple[str], found `%s`" % populate_from)
+                raise TypeError(
+                    f"'populate_from' must be str or list[str] or tuple[str], found `{populate_from}`"
+                )
 
         self.slugify_function = kwargs.pop('slugify_function', slugify)
         self.separator = kwargs.pop('separator', '-')
@@ -182,28 +183,27 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
         If an alternate separator is used, it will also replace any instances
         of the default '-' separator with the new separator.
         """
-        re_sep = '(?:-|%s)' % re.escape(self.separator)
-        value = re.sub('%s+' % re_sep, self.separator, value)
-        return re.sub(r'^%s+|%s+$' % (re_sep, re_sep), '', value)
+        re_sep = f'(?:-|{re.escape(self.separator)})'
+        value = re.sub(f'{re_sep}+', self.separator, value)
+        return re.sub(f'^{re_sep}+|{re_sep}+$', '', value)
 
     @staticmethod
     def slugify_func(content, slugify_function):
-        if content:
-            return slugify_function(content)
-        return ''
+        return slugify_function(content) if content else ''
 
     def slug_generator(self, original_slug, start):
         yield original_slug
         for i in range(start, self.max_unique_query_attempts):
             slug = original_slug
-            end = '%s%s' % (self.separator, i)
+            end = f'{self.separator}{i}'
             end_len = len(end)
             if self.slug_len and len(slug) + end_len > self.slug_len:
                 slug = slug[:self.slug_len - end_len]
                 slug = self._slug_strip(slug)
-            slug = '%s%s' % (slug, end)
-            yield slug
-        raise RuntimeError('max slug attempts for %s exceeded (%s)' % (original_slug, self.max_unique_query_attempts))
+            yield f'{slug}{end}'
+        raise RuntimeError(
+            f'max slug attempts for {original_slug} exceeded ({self.max_unique_query_attempts})'
+        )
 
     def create_slug(self, model_instance, add):
         slug = getattr(model_instance, self.attname)
@@ -253,7 +253,7 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
     def get_slug_fields(self, model_instance, lookup_value):
         if callable(lookup_value):
             # A function has been provided
-            return "%s" % lookup_value(model_instance)
+            return f"{lookup_value(model_instance)}"
 
         lookup_value_path = lookup_value.split(LOOKUP_SEP)
         attr = model_instance
@@ -262,17 +262,13 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
                 attr = getattr(attr, elem)
             except AttributeError:
                 raise AttributeError(
-                    "value {} in AutoSlugField's 'populate_from' argument {} returned an error - {} has no attribute {}".format(
-                        elem, lookup_value, attr, elem))
+                    f"value {elem} in AutoSlugField's 'populate_from' argument {lookup_value} returned an error - {attr} has no attribute {elem}"
+                )
 
-        if callable(attr):
-            return "%s" % attr()
-
-        return attr
+        return f"{attr()}" if callable(attr) else attr
 
     def pre_save(self, model_instance, add):
-        value = force_str(self.create_slug(model_instance, add))
-        return value
+        return force_str(self.create_slug(model_instance, add))
 
     def get_internal_type(self):
         return "SlugField"
@@ -280,7 +276,7 @@ class AutoSlugField(UniqueFieldMixin, SlugField):
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
         kwargs['populate_from'] = self._populate_from
-        if not self.separator == '-':
+        if self.separator != '-':
             kwargs['separator'] = self.separator
         if self.overwrite is not False:
             kwargs['overwrite'] = True
@@ -351,15 +347,17 @@ class RandomCharField(UniqueFieldMixin, CharField):
         super().__init__(*args, **kwargs)
 
     def random_char_generator(self, chars):
-        for i in range(self.max_unique_query_attempts):
+        for _ in range(self.max_unique_query_attempts):
             yield ''.join(get_random_string(self.length, chars))
-        raise RuntimeError('max random character attempts exceeded (%s)' % self.max_unique_query_attempts)
+        raise RuntimeError(
+            f'max random character attempts exceeded ({self.max_unique_query_attempts})'
+        )
 
     def in_unique_together(self, model_instance):
-        for params in model_instance._meta.unique_together:
-            if self.attname in params:
-                return True
-        return False
+        return any(
+            self.attname in params
+            for params in model_instance._meta.unique_together
+        )
 
     def pre_save(self, model_instance, add):
         if not add and getattr(model_instance, self.attname) != '':
@@ -464,9 +462,11 @@ class ModificationDateTimeField(CreationDateTimeField):
         return name, path, args, kwargs
 
     def pre_save(self, model_instance, add):
-        if not getattr(model_instance, 'update_modified', True):
-            return getattr(model_instance, self.attname)
-        return super().pre_save(model_instance, add)
+        return (
+            super().pre_save(model_instance, add)
+            if getattr(model_instance, 'update_modified', True)
+            else getattr(model_instance, self.attname)
+        )
 
 
 class UUIDVersionError(Exception):
@@ -519,7 +519,7 @@ class UUIDFieldMixin:
         elif self.version == 5:
             return uuid.uuid5(self.namespace, self.uuid_name)
         else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+            raise UUIDVersionError(f"UUID version {self.version} is not valid.")
 
     def pre_save(self, model_instance, add):
         value = super().pre_save(model_instance, add)
@@ -536,9 +536,7 @@ class UUIDFieldMixin:
         return value
 
     def formfield(self, **kwargs):
-        if self.auto:
-            return None
-        return super().formfield(**kwargs)
+        return None if self.auto else super().formfield(**kwargs)
 
     def deconstruct(self):
         name, path, args, kwargs = super().deconstruct()
@@ -590,4 +588,4 @@ class ShortUUIDField(UUIDFieldMixin, CharField):
         elif self.version == 5:
             return shortuuid.uuid(name=self.namespace)
         else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+            raise UUIDVersionError(f"UUID version {self.version} is not valid.")

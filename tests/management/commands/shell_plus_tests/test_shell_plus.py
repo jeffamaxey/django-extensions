@@ -17,7 +17,7 @@ def test_shell_plus_command(capsys):
         def _fn(x): return x * 2
         print([_fn(i) for i in range(10)])
         ''')
-    call_command("shell_plus", "--command=" + script)
+    call_command("shell_plus", f"--command={script}")
     out, err = capsys.readouterr()
 
     assert out.rstrip().endswith(repr([i * 2 for i in range(10)]))
@@ -30,7 +30,7 @@ def test_shell_plus_print_sql(capsys):
         from django.db import connection
         from django.db.backends import utils
         CursorDebugWrapper = utils.CursorDebugWrapper
-        force_debug_cursor = True if connection.force_debug_cursor else False
+        force_debug_cursor = bool(connection.force_debug_cursor)
         call_command("shell_plus", "--plain", "--print-sql", "--command=User.objects.all().exists()")
     finally:
         utils.CursorDebugWrapper = CursorDebugWrapper
@@ -48,7 +48,7 @@ def test_shell_plus_print_sql_truncate(capsys):
         from django.db import connection
         from django.db.backends import utils
         CursorDebugWrapper = utils.CursorDebugWrapper
-        force_debug_cursor = True if connection.force_debug_cursor else False
+        force_debug_cursor = bool(connection.force_debug_cursor)
         call_command("shell_plus", "--plain", "--print-sql", "--truncate-sql=0", "--command=User.objects.all().exists()")
     finally:
         utils.CursorDebugWrapper = CursorDebugWrapper
@@ -62,7 +62,7 @@ def test_shell_plus_print_sql_truncate(capsys):
         from django.db import connection
         from django.db.backends import utils
         CursorDebugWrapper = utils.CursorDebugWrapper
-        force_debug_cursor = True if connection.force_debug_cursor else False
+        force_debug_cursor = connection.force_debug_cursor
         call_command("shell_plus", "--plain", "--print-sql", "--truncate-sql=4", "--command=User.objects.all().exists()")
     finally:
         utils.CursorDebugWrapper = CursorDebugWrapper

@@ -8,10 +8,7 @@ class IndentByNode(template.Node):
     def __init__(self, nodelist, indent_level, if_statement):
         self.nodelist = nodelist
         self.indent_level = template.Variable(indent_level)
-        if if_statement:
-            self.if_statement = template.Variable(if_statement)
-        else:
-            self.if_statement = None
+        self.if_statement = template.Variable(if_statement) if if_statement else None
 
     def render(self, context):
         indent_level = self.indent_level.resolve(context)
@@ -47,9 +44,7 @@ def indentby(parser, token):
     if largs not in (2, 4):
         raise template.TemplateSyntaxError("indentby tag requires 1 or 3 arguments")
     indent_level = args[1]
-    if_statement = None
-    if largs == 4:
-        if_statement = args[3]
+    if_statement = args[3] if largs == 4 else None
     nodelist = parser.parse(('endindentby', ))
     parser.delete_first_token()
     return IndentByNode(nodelist, indent_level, if_statement)

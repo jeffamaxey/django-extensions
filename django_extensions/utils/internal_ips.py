@@ -27,9 +27,7 @@ class InternalIPS(Container):
             ranges, largest first.
         """
         self._cidrs = []
-        for address in iterable:
-            self._cidrs.append(ipaddress.ip_network(address))
-
+        self._cidrs.extend(ipaddress.ip_network(address) for address in iterable)
         if sort_by_size:
             self._cidrs = sorted(self._cidrs)
 
@@ -40,10 +38,7 @@ class InternalIPS(Container):
         :return: ``True`` if IP address or subnet is a member of this InternalIPS set.
         """
         address = ipaddress.ip_address(address)
-        for cidr in self._cidrs:
-            if address in cidr:
-                return True
-        return False
+        return any(address in cidr for cidr in self._cidrs)
 
     def __hash__(self):
         """

@@ -33,7 +33,7 @@ class SyncDataExceptionsTests(TestCase):
             call_command('syncdata', 'fixture_with_nonexistent_field.json', verbosity=1)
 
     def test_should_return_SyncDataError_when_multiple_fixtures(self):
-        with pytest.raises(CommandError, match="Multiple fixtures named 'users' in '{}'. Aborting.".format(TEST_FIXTURE_DIR)):
+        with pytest.raises(CommandError, match=f"Multiple fixtures named 'users' in '{TEST_FIXTURE_DIR}'. Aborting."):
             call_command('syncdata', 'users', verbosity=2)
 
 

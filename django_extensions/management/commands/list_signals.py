@@ -51,8 +51,7 @@ class Command(BaseCommand):
                     continue
                 receiver_id, sender_id = lookup
 
-                model = model_lookup.get(sender_id, '_unknown_')
-                if model:
+                if model := model_lookup.get(sender_id, '_unknown_'):
                     models[model][signal_name].append(MSG.format(
                         name=receiver.__name__,
                         module=receiver.__module__,
@@ -63,12 +62,9 @@ class Command(BaseCommand):
         output = []
         for key in sorted(models.keys(), key=str):
             verbose_name = force_str(key._meta.verbose_name)
-            output.append('{}.{} ({})'.format(
-                key.__module__, key.__name__, verbose_name))
+            output.append(f'{key.__module__}.{key.__name__} ({verbose_name})')
             for signal_name in sorted(models[key].keys()):
                 lines = models[key][signal_name]
-                output.append('    {}'.format(signal_name))
-                for line in lines:
-                    output.append('        {}'.format(line))
-
+                output.append(f'    {signal_name}')
+                output.extend(f'        {line}' for line in lines)
         return '\n'.join(output)

@@ -16,8 +16,8 @@ class RateLimiterFilter(logging.Filter):
         prefix = getattr(settings, 'RATE_LIMITER_FILTER_PREFIX', 'ratelimiterfilter')
 
         subject = record.getMessage()
-        cache_key = "%s:%s" % (prefix, md5(subject).hexdigest())
-        cache_count_key = "%s:count" % cache_key
+        cache_key = f"{prefix}:{md5(subject).hexdigest()}"
+        cache_count_key = f"{cache_key}:count"
 
         result = cache.get_many([cache_key, cache_count_key])
         value = result.get(cache_key)
@@ -31,6 +31,6 @@ class RateLimiterFilter(logging.Filter):
             cache.incr(cache_count_key)
             return False
 
-        record.msg = "[%sx] %s" % (cntr, record.msg)
+        record.msg = f"[{cntr}x] {record.msg}"
         cache.set(cache_key, time.time(), rate)
         return True

@@ -48,10 +48,10 @@ def copy_template(template_name, copy_to, **options):
             path_new = os.path.join(copy_to, relative_dir, f).rstrip(".tmpl")
             if os.path.exists(path_new):
                 if verbosity > 1:
-                    print(ERROR("%s already exists" % path_new))
+                    print(ERROR(f"{path_new} already exists"))
                 continue
             if verbosity > 1:
-                print(SUCCESS("%s" % path_new))
+                print(SUCCESS(f"{path_new}"))
 
             with open(path_old, 'r') as fp_orig:
                 with open(path_new, 'w') as fp_new:

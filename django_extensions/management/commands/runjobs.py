@@ -18,8 +18,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         super().add_arguments(parser)
         parser.add_argument(
-            'when', nargs='?',
-            help="options: %s" % ', '.join(self.when_options)
+            'when', nargs='?', help=f"options: {', '.join(self.when_options)}"
         )
         parser.add_argument(
             '--list', '-l', action="store_true", dest="list_jobs",
@@ -27,7 +26,7 @@ class Command(BaseCommand):
         )
 
     def usage_msg(self):
-        print("%s Please specify: %s" % (self.help, ', '.join(self.when_options)))
+        print(f"{self.help} Please specify: {', '.join(self.when_options)}")
 
     def runjobs(self, when, options):
         verbosity = options["verbosity"]
@@ -50,14 +49,14 @@ class Command(BaseCommand):
         verbosity = options["verbosity"]
         for app_name in settings.INSTALLED_APPS:
             try:
-                __import__(app_name + '.management', '', '', [''])
+                __import__(f'{app_name}.management', '', '', [''])
             except ImportError:
                 pass
 
         for app in (app.models_module for app in apps.get_app_configs() if app.models_module):
             if verbosity > 1:
                 app_name = '.'.join(app.__name__.rsplit('.')[:-1])
-                print("Sending %s job signal for: %s" % (when, app_name))
+                print(f"Sending {when} job signal for: {app_name}")
             if when == 'minutely':
                 signals.run_minutely_jobs.send(sender=app, app=app)
             elif when == 'quarter_hourly':

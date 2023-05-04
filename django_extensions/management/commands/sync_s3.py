@@ -176,30 +176,30 @@ class Command(BaseCommand):
         if not HAS_BOTO:
             raise CommandError("Please install the 'boto' Python library. ($ pip install boto)")
 
-        # Check for AWS keys in settings
-        if not hasattr(settings, 'AWS_ACCESS_KEY_ID') or not hasattr(settings, 'AWS_SECRET_ACCESS_KEY'):
+        if not hasattr(settings, 'AWS_ACCESS_KEY_ID') or not hasattr(
+            settings, 'AWS_SECRET_ACCESS_KEY'
+        ):
             raise CommandError('Missing AWS keys from settings file.  Please supply both AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY.')
-        else:
-            self.AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
-            self.AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
+        self.AWS_ACCESS_KEY_ID = settings.AWS_ACCESS_KEY_ID
+        self.AWS_SECRET_ACCESS_KEY = settings.AWS_SECRET_ACCESS_KEY
 
         if not hasattr(settings, 'AWS_BUCKET_NAME'):
             raise CommandError('Missing bucket name from settings file. Please add the AWS_BUCKET_NAME to your settings file.')
-        else:
-            if not settings.AWS_BUCKET_NAME:
-                raise CommandError('AWS_BUCKET_NAME cannot be empty.')
+        if not settings.AWS_BUCKET_NAME:
+            raise CommandError('AWS_BUCKET_NAME cannot be empty.')
         self.AWS_BUCKET_NAME = settings.AWS_BUCKET_NAME
 
-        if not hasattr(settings, 'MEDIA_ROOT'):
+        if (
+            hasattr(settings, 'MEDIA_ROOT')
+            and not settings.MEDIA_ROOT
+            or not hasattr(settings, 'MEDIA_ROOT')
+        ):
             raise CommandError('MEDIA_ROOT must be set in your settings.')
-        else:
-            if not settings.MEDIA_ROOT:
-                raise CommandError('MEDIA_ROOT must be set in your settings.')
 
         self.AWS_CLOUDFRONT_DISTRIBUTION = getattr(settings, 'AWS_CLOUDFRONT_DISTRIBUTION', '')
 
         self.SYNC_S3_RENAME_GZIP_EXT = \
-            getattr(settings, 'SYNC_S3_RENAME_GZIP_EXT', '.gz')
+                getattr(settings, 'SYNC_S3_RENAME_GZIP_EXT', '.gz')
 
         self.verbosity = options["verbosity"]
         self.prefix = options['prefix']
@@ -212,8 +212,7 @@ class Command(BaseCommand):
         self.s3host = options['s3host']
         self.default_acl = options['acl']
         self.FILTER_LIST = getattr(settings, 'FILTER_LIST', self.FILTER_LIST)
-        filter_list = options['filter_list']
-        if filter_list:
+        if filter_list := options['filter_list']:
             # command line option overrides default filter_list and
             # settings.filter_list
             self.FILTER_LIST = filter_list.split(',')
@@ -332,25 +331,26 @@ class Command(BaseCommand):
 
             file_key = filename[len(root_dir):]
             if self.prefix:
-                file_key = '%s/%s' % (self.prefix, file_key)
+                file_key = f'{self.prefix}/{file_key}'
 
-            # Check if file on S3 is older than local file, if so, upload
-            if not self.do_force:
-                s3_key = bucket.get_key(file_key)
-                if s3_key:
-                    s3_datetime = datetime.datetime(*time.strptime(
-                        s3_key.last_modified, '%a, %d %b %Y %H:%M:%S %Z')[0:6])
+            if s3_key := bucket.get_key(file_key):
+                if not self.do_force:
+                    s3_datetime = datetime.datetime(
+                        *time.strptime(
+                            s3_key.last_modified, '%a, %d %b %Y %H:%M:%S %Z'
+                        )[:6]
+                    )
                     local_datetime = datetime.datetime.utcfromtimestamp(
                         os.stat(filename).st_mtime)
                     if local_datetime < s3_datetime:
                         self.skip_count += 1
                         if self.verbosity > 1:
-                            print("File %s hasn't been modified since last being uploaded" % file_key)
+                            print(f"File {file_key} hasn't been modified since last being uploaded")
                         continue
 
             # File is newer, let's process and upload
             if self.verbosity > 0:
-                print("Uploading %s..." % file_key)
+                print(f"Uploading {file_key}...")
 
             content_type = mimetypes.guess_type(filename)[0]
             if content_type:
@@ -358,43 +358,41 @@ class Command(BaseCommand):
             else:
                 headers['Content-Type'] = 'application/octet-stream'
 
-            file_obj = open(filename, 'rb')
-            file_size = os.fstat(file_obj.fileno()).st_size
-            filedata = file_obj.read()
-            if self.do_gzip:
-                # Gzip only if file is large enough (>1K is recommended)
-                # and only if file is a common text type (not a binary file)
-                if file_size > 1024 and content_type in self.GZIP_CONTENT_TYPES:
+            with open(filename, 'rb') as file_obj:
+                file_size = os.fstat(file_obj.fileno()).st_size
+                filedata = file_obj.read()
+                if (
+                    self.do_gzip
+                    and file_size > 1024
+                    and content_type in self.GZIP_CONTENT_TYPES
+                ):
                     filedata = self.compress_string(filedata)
                     if self.rename_gzip:
                         # If rename_gzip is True, then rename the file
                         # by appending an extension (like '.gz)' to
                         # original filename.
-                        file_key = '%s.%s' % (
-                            file_key, self.SYNC_S3_RENAME_GZIP_EXT)
+                        file_key = f'{file_key}.{self.SYNC_S3_RENAME_GZIP_EXT}'
                     headers['Content-Encoding'] = 'gzip'
                     if self.verbosity > 1:
                         print("\tgzipped: %dk to %dk" % (file_size / 1024, len(filedata) / 1024))
-            if self.do_expires:
-                # HTTP/1.0
-                headers['Expires'] = '%s GMT' % (email.Utils.formatdate(time.mktime((datetime.datetime.now() + datetime.timedelta(days=365 * 2)).timetuple())))
-                # HTTP/1.1
-                headers['Cache-Control'] = 'max-age %d' % (3600 * 24 * 365 * 2)
-                if self.verbosity > 1:
-                    print("\texpires: %s" % headers['Expires'])
-                    print("\tcache-control: %s" % headers['Cache-Control'])
+                if self.do_expires:
+                    # HTTP/1.0
+                    headers['Expires'] = '%s GMT' % (email.Utils.formatdate(time.mktime((datetime.datetime.now() + datetime.timedelta(days=365 * 2)).timetuple())))
+                    # HTTP/1.1
+                    headers['Cache-Control'] = 'max-age %d' % (3600 * 24 * 365 * 2)
+                    if self.verbosity > 1:
+                        print("\texpires: %s" % headers['Expires'])
+                        print("\tcache-control: %s" % headers['Cache-Control'])
 
-            try:
-                key.name = file_key
-                key.set_contents_from_string(filedata, headers, replace=True,
-                                             policy=self.default_acl)
-            except boto.exception.S3CreateError as e:
-                print("Failed: %s" % e)
-            except Exception as e:
-                print(e)
-                raise
-            else:
-                self.upload_count += 1
-                self.uploaded_files.append(file_key)
-
-            file_obj.close()
+                try:
+                    key.name = file_key
+                    key.set_contents_from_string(filedata, headers, replace=True,
+                                                 policy=self.default_acl)
+                except boto.exception.S3CreateError as e:
+                    print(f"Failed: {e}")
+                except Exception as e:
+                    print(e)
+                    raise
+                else:
+                    self.upload_count += 1
+                    self.uploaded_files.append(file_key)

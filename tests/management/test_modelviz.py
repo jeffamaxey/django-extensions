@@ -18,7 +18,7 @@ class ModelVizTests(SimpleTestCase):
         data = generate_graph_data(app_labels, verbose_names=True)
         models = data['graphs'][0]['models']
         model = [x for x in models if x['name'] == 'UnicodeVerboseNameModel'][0]
-        fields = dict((_f['name'], _f['label']) for _f in model['fields'])
+        fields = {_f['name']: _f['label'] for _f in model['fields']}
         expected = {
             'id': u'ID',
             'cafe': u'Café',

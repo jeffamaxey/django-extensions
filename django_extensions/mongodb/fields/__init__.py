@@ -31,8 +31,7 @@ class SlugField(StringField):
         return "SlugField"
 
     def formfield(self, **kwargs):
-        defaults = {'form_class': forms.SlugField}
-        defaults.update(kwargs)
+        defaults = {'form_class': forms.SlugField} | kwargs
         return super().formfield(**defaults)
 
 
@@ -70,7 +69,7 @@ class AutoSlugField(SlugField):
             self._populate_from = populate_from
 
         self.slugify_function = kwargs.pop('slugify_function', slugify)
-        self.separator = kwargs.pop('separator', str('-'))
+        self.separator = kwargs.pop('separator', '-')
         self.overwrite = kwargs.pop('overwrite', False)
         super().__init__(*args, **kwargs)
 
@@ -82,9 +81,9 @@ class AutoSlugField(SlugField):
         If an alternate separator is used, it will also replace any instances
         of the default '-' separator with the new separator.
         """
-        re_sep = '(?:-|%s)' % re.escape(self.separator)
-        value = re.sub('%s+' % re_sep, self.separator, value)
-        return re.sub(r'^%s+|%s+$' % (re_sep, re_sep), '', value)
+        re_sep = f'(?:-|{re.escape(self.separator)})'
+        value = re.sub(f'{re_sep}+', self.separator, value)
+        return re.sub(f'^{re_sep}+|{re_sep}+$', '', value)
 
     def slugify_func(self, content):
         return self.slugify_function(content)
@@ -137,12 +136,12 @@ class AutoSlugField(SlugField):
         # depending on the given slug, clean-up
         while not slug or queryset.filter(**kwargs):
             slug = original_slug
-            end = '%s%s' % (self.separator, next)
+            end = f'{self.separator}{next}'
             end_len = len(end)
             if slug_len and len(slug) + end_len > slug_len:
                 slug = slug[:slug_len - end_len]
                 slug = self._slug_strip(slug)
-            slug = '%s%s' % (slug, end)
+            slug = f'{slug}{end}'
             kwargs[self.attname] = slug
             next += 1
         return slug
@@ -155,13 +154,10 @@ class AutoSlugField(SlugField):
                 attr = getattr(attr, elem)
             except AttributeError:
                 raise AttributeError(
-                    "value {} in AutoSlugField's 'populate_from' argument {} returned an error - {} has no attribute {}".format(
-                        elem, lookup_value, attr, elem))
+                    f"value {elem} in AutoSlugField's 'populate_from' argument {lookup_value} returned an error - {attr} has no attribute {elem}"
+                )
 
-        if callable(attr):
-            return "%s" % attr()
-
-        return attr
+        return f"{attr()}" if callable(attr) else attr
 
     def pre_save(self, model_instance, add):
         value = str(self.create_slug(model_instance, add))
@@ -225,7 +221,7 @@ class UUIDField(StringField):
         self.version = version
         if version == 1:
             self.node, self.clock_seq = node, clock_seq
-        elif version == 3 or version == 5:
+        elif version in [3, 5]:
             self.namespace, self.name = namespace, name
         StringField.__init__(self, verbose_name, name, **kwargs)
 
@@ -234,7 +230,9 @@ class UUIDField(StringField):
 
     def contribute_to_class(self, cls, name):
         if self.primary_key:
-            assert not cls._meta.has_auto_field, "A model can't have more than one AutoField: %s %s %s; have %s" % (self, cls, name, cls._meta.auto_field)
+            assert (
+                not cls._meta.has_auto_field
+            ), f"A model can't have more than one AutoField: {self} {cls} {name}; have {cls._meta.auto_field}"
             super().contribute_to_class(cls, name)
             cls._meta.has_auto_field = True
             cls._meta.auto_field = self
@@ -253,7 +251,7 @@ class UUIDField(StringField):
         elif self.version == 5:
             return uuid.uuid5(self.namespace, self.name)
         else:
-            raise UUIDVersionError("UUID version %s is not valid." % self.version)
+            raise UUIDVersionError(f"UUID version {self.version} is not valid.")
 
     def pre_save(self, model_instance, add):
         if self.auto and add:

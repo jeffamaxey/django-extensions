@@ -35,10 +35,7 @@ class LegacyCR(BaseCR):
     """ Default collision resolver. Model from last application in alphabetical order is selected. """
 
     def resolve_collisions(self, namespace):
-        result = {}
-        for name, models in namespace.items():
-            result[name] = models[-1]
-        return result
+        return {name: models[-1] for name, models in namespace.items()}
 
 
 class AppsOrderCR(LegacyCR, metaclass=ABCMeta):
@@ -243,8 +240,12 @@ class CollisionResolvingRunner:
     def _assert_is_collision_resolver_result_correct(cls, result):
         assert isinstance(result, dict), "Result of resolve_collisions function must be a dict!"
         for key, value in result.items():
-            assert isinstance(key, str), "key in collision resolver result should be str not %s" % key
-            assert isinstance(value, str), "value in collision resolver result should be str not %s" % value
+            assert isinstance(
+                key, str
+            ), f"key in collision resolver result should be str not {key}"
+            assert isinstance(
+                value, str
+            ), f"value in collision resolver result should be str not {value}"
 
     @classmethod
     def _assert_is_collision_resolver_class_correct(cls, collision_resolver_class):

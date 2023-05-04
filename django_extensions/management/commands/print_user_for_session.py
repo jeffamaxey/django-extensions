@@ -34,8 +34,8 @@ class Command(BaseCommand):
         session = engine.SessionStore(key)
         data = session.load()
 
-        print('Session to Expire: %s' % session.get_expiry_date())
-        print('Raw Data: %s' % data)
+        print(f'Session to Expire: {session.get_expiry_date()}')
+        print(f'Raw Data: {data}')
         uid = data.get(SESSION_KEY, None)
         backend_path = data.get(BACKEND_SESSION_KEY, None)
 
@@ -47,7 +47,7 @@ class Command(BaseCommand):
             print('No user associated with session')
             return
 
-        print(u"User id: %s" % uid)
+        print(f"User id: {uid}")
 
         backend = load_backend(backend_path)
         user = backend.get_user(user_id=uid)
@@ -56,8 +56,8 @@ class Command(BaseCommand):
             return
 
         # use django standrd api for reporting
-        print("full name: %s" % user.get_full_name())
-        print("short name: %s" % user.get_short_name())
-        print("username: %s" % user.get_username())
+        print(f"full name: {user.get_full_name()}")
+        print(f"short name: {user.get_short_name()}")
+        print(f"username: {user.get_username()}")
         if hasattr(user, 'email'):
-            print("email: %s" % user.email)
+            print(f"email: {user.email}")

@@ -48,7 +48,10 @@ def copy_template(template_name, copy_to, **options):
     ERROR = getattr(style, 'ERROR', lambda x: x)
     SUCCESS = getattr(style, 'SUCCESS', lambda x: x)
 
-    command_name, base_command = options['command_name'], '%sCommand' % options['base_command']
+    command_name, base_command = (
+        options['command_name'],
+        f"{options['base_command']}Command",
+    )
     dry_run = options['dry_run']
     verbosity = options["verbosity"]
 
@@ -57,9 +60,12 @@ def copy_template(template_name, copy_to, **options):
     # walk the template structure and copies it
     for d, subdirs, files in os.walk(template_dir):
         relative_dir = d[len(template_dir) + 1:]
-        if relative_dir and not os.path.exists(os.path.join(copy_to, relative_dir)):
-            if not dry_run:
-                os.mkdir(os.path.join(copy_to, relative_dir))
+        if (
+            relative_dir
+            and not os.path.exists(os.path.join(copy_to, relative_dir))
+            and not dry_run
+        ):
+            os.mkdir(os.path.join(copy_to, relative_dir))
         for i, subdir in enumerate(subdirs):
             if subdir.startswith('.'):
                 del subdirs[i]
@@ -72,10 +78,10 @@ def copy_template(template_name, copy_to, **options):
                 path_new = os.path.join(copy_to, relative_dir, f).rstrip(".tmpl")
                 if os.path.exists(path_new):
                     if verbosity > 1:
-                        print(ERROR("%s already exists" % path_new))
+                        print(ERROR(f"{path_new} already exists"))
                     continue
             if verbosity > 1:
-                print(SUCCESS("%s" % path_new))
+                print(SUCCESS(f"{path_new}"))
             with open(path_old, 'r') as fp_orig:
                 data = fp_orig.read()
                 data = data.replace('{{ command_name }}', command_name)

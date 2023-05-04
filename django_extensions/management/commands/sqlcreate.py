@@ -29,8 +29,9 @@ The envisioned use case is something like this:
             help='Use this router-database other then defined in settings.py'
         )
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
         parser.add_argument(
             '-D', '--drop', action='store_true', dest='drop', default=False,
@@ -46,7 +47,7 @@ The envisioned use case is something like this:
 
         dbinfo = settings.DATABASES.get(database)
         if dbinfo is None:
-            raise CommandError("Unknown database %s" % database)
+            raise CommandError(f"Unknown database {database}")
 
         engine = dbinfo.get('ENGINE')
         dbuser = dbinfo.get('USER')
@@ -66,28 +67,28 @@ The envisioned use case is something like this:
             sys.stderr.write("""-- WARNING!: https://docs.djangoproject.com/en/dev/ref/databases/#collation-settings
 -- Please read this carefully! Collation will be set to utf8_bin to have case-sensitive data.
 """)
-            print("CREATE DATABASE %s CHARACTER SET utf8 COLLATE utf8_bin;" % dbname)
-            print("GRANT ALL PRIVILEGES ON %s.* to '%s'@'%s' identified by '%s';" % (
-                dbname, dbuser, dbclient, dbpass
-            ))
+            print(f"CREATE DATABASE {dbname} CHARACTER SET utf8 COLLATE utf8_bin;")
+            print(
+                f"GRANT ALL PRIVILEGES ON {dbname}.* to '{dbuser}'@'{dbclient}' identified by '{dbpass}';"
+            )
         elif engine in POSTGRESQL_ENGINES:
             if options['drop']:
-                print("DROP DATABASE IF EXISTS %s;" % (dbname,))
+                print(f"DROP DATABASE IF EXISTS {dbname};")
                 if dbuser:
-                    print("DROP USER IF EXISTS %s;" % (dbuser,))
+                    print(f"DROP USER IF EXISTS {dbuser};")
 
             if dbuser and dbpass:
-                print("CREATE USER %s WITH ENCRYPTED PASSWORD '%s' CREATEDB;" % (dbuser, dbpass))
+                print(f"CREATE USER {dbuser} WITH ENCRYPTED PASSWORD '{dbpass}' CREATEDB;")
                 print("CREATE DATABASE %s WITH ENCODING 'UTF-8' OWNER \"%s\";" % (dbname, dbuser))
-                print("GRANT ALL PRIVILEGES ON DATABASE %s TO %s;" % (dbname, dbuser))
+                print(f"GRANT ALL PRIVILEGES ON DATABASE {dbname} TO {dbuser};")
             else:
                 print(
                     "-- Assuming that unix domain socket connection mode is being used because\n"
                     "-- USER or PASSWORD are blank in Django DATABASES configuration."
                 )
-                print("CREATE DATABASE %s WITH ENCODING 'UTF-8';" % (dbname, ))
+                print(f"CREATE DATABASE {dbname} WITH ENCODING 'UTF-8';")
         else:
             # CREATE DATABASE is not SQL standard, but seems to be supported by most.
             sys.stderr.write("-- Don't know how to handle '%s' falling back to SQL.\n" % engine)
-            print("CREATE DATABASE %s;" % dbname)
-            print("GRANT ALL PRIVILEGES ON DATABASE %s to %s;" % (dbname, dbuser))
+            print(f"CREATE DATABASE {dbname};")
+            print(f"GRANT ALL PRIVILEGES ON DATABASE {dbname} to {dbuser};")

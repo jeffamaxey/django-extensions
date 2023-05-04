@@ -9,20 +9,17 @@ from django_extensions.management.utils import signalcommand
 
 def get_model_to_deduplicate():
     models = apps.get_models()
-    iterator = 1
-    for model in models:
-        print("%s. %s" % (iterator, model.__name__))
-        iterator += 1
+    for iterator, model in enumerate(models, start=1):
+        print(f"{iterator}. {model.__name__}")
     model_choice = int(input("Enter the number of the model you would like to de-duplicate:"))
-    model_to_deduplicate = models[model_choice - 1]
-    return model_to_deduplicate
+    return models[model_choice - 1]
 
 
 def get_field_names(model):
     fields = [field.name for field in model._meta.get_fields()]
     iterator = 1
     for field in fields:
-        print("%s. %s" % (iterator, field))
+        print(f"{iterator}. {field}")
         iterator += 1
     validated = False
     while not validated:
@@ -38,10 +35,8 @@ def get_field_names(model):
         available_fields = [
             f for f in fields if f not in fields_to_deduplicate
         ]
-        iterator = 1
-        for field in available_fields:
-            print("%s. %s" % (iterator, field))
-            iterator += 1
+        for iterator, field in enumerate(available_fields, start=1):
+            print(f"{iterator}. {field}")
         print("C. Done adding fields.")
 
         validated = False
@@ -79,9 +74,11 @@ def get_generic_fields():
     """Return a list of all GenericForeignKeys in all models."""
     generic_fields = []
     for model in apps.get_models():
-        for field_name, field in model.__dict__.items():
-            if isinstance(field, GenericForeignKey):
-                generic_fields.append(field)
+        generic_fields.extend(
+            field
+            for field_name, field in model.__dict__.items()
+            if isinstance(field, GenericForeignKey)
+        )
     return generic_fields
 
 
@@ -109,9 +106,7 @@ class Command(BaseCommand):
             kwargs = {}
             for field_name in field_names:
                 instance_field_value = instance.__getattribute__(field_name)
-                kwargs.update({
-                    field_name: instance_field_value
-                })
+                kwargs[field_name] = instance_field_value
             try:
                 model.objects.get(**kwargs)
             except model.MultipleObjectsReturned:
@@ -126,7 +121,7 @@ class Command(BaseCommand):
                 primary_object, deleted_objects, deleted_objects_count = self.merge_model_instances(primary_object, alias_objects)
                 total_deleted_objects_count += deleted_objects_count
 
-        print("Successfully deleted {} model instances.".format(total_deleted_objects_count))
+        print(f"Successfully deleted {total_deleted_objects_count} model instances.")
 
     @transaction.atomic()
     def merge_model_instances(self, primary_object, alias_objects):
@@ -199,13 +194,11 @@ class Command(BaseCommand):
                         setattr(primary_object, alias_varname, related_object)
                         primary_object.save()
                     elif related_field.one_to_one:
-                        self.stdout.write("Deleted {} with id {}\n".format(
-                            related_object, related_object.id))
+                        self.stdout.write(f"Deleted {related_object} with id {related_object.id}\n")
                         related_object.delete()
 
             for field in generic_fields:
-                filter_kwargs = {}
-                filter_kwargs[field.fk_field] = alias_object._get_pk_val()
+                filter_kwargs = {field.fk_field: alias_object._get_pk_val()}
                 filter_kwargs[field.ct_field] = field.get_content_type(alias_object)
                 related_objects = field.model.objects.filter(**filter_kwargs)
                 for generic_related_object in related_objects:
@@ -214,8 +207,7 @@ class Command(BaseCommand):
 
             if alias_object.id:
                 deleted_objects += [alias_object]
-                self.stdout.write("Deleted {} with id {}\n".format(
-                    alias_object, alias_object.id))
+                self.stdout.write(f"Deleted {alias_object} with id {alias_object.id}\n")
                 alias_object.delete()
                 deleted_objects_count += 1
 

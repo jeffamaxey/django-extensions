@@ -181,9 +181,7 @@ class Command(BaseCommand):
             },
         }
 
-        defaults = getattr(settings, 'GRAPH_MODELS', None)
-
-        if defaults:
+        if defaults := getattr(settings, 'GRAPH_MODELS', None):
             for argument in self.arguments:
                 arg_split = argument.split(' ')
                 setting_opt = arg_split[0].lstrip('-').replace('-', '_')
@@ -202,8 +200,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         args = options['app_label']
         if not args and not options['all_applications']:
-            default_app_labels = getattr(settings, 'GRAPH_MODELS', {}).get("app_labels")
-            if default_app_labels:
+            if default_app_labels := getattr(settings, 'GRAPH_MODELS', {}).get(
+                "app_labels"
+            ):
                 args = default_app_labels
             else:
                 raise CommandError("need one or more arguments for appname")
@@ -217,7 +216,9 @@ class Command(BaseCommand):
         output_opts = {k: v for k, v in options.items() if k in output_opts_names}
         output_opts_count = sum(output_opts.values())
         if output_opts_count > 1:
-            raise CommandError("Only one of %s can be set." % ", ".join(["--%s" % opt for opt in output_opts_names]))
+            raise CommandError(
+                f'Only one of {", ".join([f"--{opt}" for opt in output_opts_names])} can be set.'
+            )
 
         if output_opts_count == 1:
             output = next(key for key, val in output_opts.items() if val)

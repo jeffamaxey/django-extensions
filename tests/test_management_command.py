@@ -309,7 +309,7 @@ class ListModelInfoTests(TestCase):
         out = StringIO()
         call_command('list_model_info', '--model', 'django_extensions.MultipleFieldsAndMethods', '--db-type', stdout=out)
         self.output = out.getvalue()
-        self.assertIn('id - %s' % id_type, self.output)
+        self.assertIn(f'id - {id_type}', self.output)
         self.assertIn('char_field - varchar(10)', self.output)
         self.assertIn('integer_field - integer', self.output)
         self.assertIn('foreign_key_field - integer', self.output)
@@ -498,14 +498,12 @@ class RunJobsTests(TestCase):
         for job in jobs:
             job[1].reset_mock()
 
-        counter = 1
-        for job in jobs:
+        for counter, job in enumerate(jobs, start=1):
             call_command('runjobs', job[0], verbosity=2)
             for already_called in jobs[:counter]:
                 already_called[1].assert_called_once_with()
             for not_yet_called in jobs[counter:]:
                 not_yet_called[1].assert_not_called()
-            counter += 1
 
     def test_runjob_integration_test(self):
         jobs = [
@@ -520,11 +518,9 @@ class RunJobsTests(TestCase):
         for job in jobs:
             job[1].reset_mock()
 
-        counter = 1
-        for job in jobs:
+        for counter, job in enumerate(jobs, start=1):
             call_command('runjob', job[0], verbosity=2)
             for already_called in jobs[:counter]:
                 already_called[1].assert_called_once_with()
             for not_yet_called in jobs[counter:]:
                 not_yet_called[1].assert_not_called()
-            counter += 1

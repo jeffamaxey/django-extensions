@@ -69,11 +69,7 @@ class JSONField(models.TextField):
         if value is None or value == '':
             return {}
 
-        if isinstance(value, str):
-            res = loads(value)
-        else:
-            res = value
-
+        res = loads(value) if isinstance(value, str) else value
         if isinstance(res, dict):
             return JSONDict(**res)
         elif isinstance(res, list):
@@ -82,9 +78,11 @@ class JSONField(models.TextField):
         return res
 
     def get_prep_value(self, value):
-        if not isinstance(value, str):
-            return dumps(value)
-        return super(models.TextField, self).get_prep_value(value)
+        return (
+            super(models.TextField, self).get_prep_value(value)
+            if isinstance(value, str)
+            else dumps(value)
+        )
 
     def from_db_value(self, value, expression, connection):  # type: ignore
         return self.to_python(value)

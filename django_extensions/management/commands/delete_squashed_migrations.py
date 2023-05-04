@@ -12,7 +12,7 @@ PYC = '.pyc'
 
 
 def py_from_pyc(pyc_fn):
-    return pyc_fn[:-len(PYC)] + '.py'
+    return f'{pyc_fn[:-len(PYC)]}.py'
 
 
 class Command(BaseCommand):
@@ -38,8 +38,9 @@ class Command(BaseCommand):
             '--dry-run', action='store_true', default=False,
             help='Do not actually delete or change any files')
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
 
     def handle(self, **options):
@@ -63,8 +64,7 @@ class Command(BaseCommand):
             squashed_migration = self.find_migration(loader, app_label, squashed_migration_name)
             if not squashed_migration.replaces:
                 raise CommandError(
-                    "The migration %s %s is not a squashed migration." %
-                    (squashed_migration.app_label, squashed_migration.name)
+                    f"The migration {squashed_migration.app_label} {squashed_migration.name} is not a squashed migration."
                 )
         else:
             leaf_nodes = loader.graph.leaf_nodes(app=app_label)
@@ -81,10 +81,7 @@ class Command(BaseCommand):
                     break
 
             if not squashed_migration:
-                raise CommandError(
-                    "Cannot find a squashed migration in app '%s'." %
-                    (app_label)
-                )
+                raise CommandError(f"Cannot find a squashed migration in app '{app_label}'.")
 
         files_to_delete = []
         for al, mn in squashed_migration.replaces:
@@ -105,7 +102,7 @@ class Command(BaseCommand):
         if self.verbosity > 0 or self.interactive:
             self.stdout.write(self.style.MIGRATE_HEADING("Will delete the following files:"))
             for fn in files_to_delete:
-                self.stdout.write(" - %s" % fn)
+                self.stdout.write(f" - {fn}")
 
             if not self.confirm():
                 return
@@ -139,11 +136,11 @@ class Command(BaseCommand):
             )
 
         if self.verbosity > 0 or self.interactive:
-            self.stdout.write(self.style.MIGRATE_HEADING(
-                "Will delete line %s%s from file %s" %
-                (delete_lines[0],
-                 ' and ' + str(delete_lines[1]) if len(delete_lines) > 1 else "",
-                 squashed_migration_fn)))
+            self.stdout.write(
+                self.style.MIGRATE_HEADING(
+                    f"""Will delete line {delete_lines[0]}{f' and {str(delete_lines[1])}' if len(delete_lines) > 1 else ""} from file {squashed_migration_fn}"""
+                )
+            )
 
             if not self.confirm():
                 return
@@ -156,17 +153,17 @@ class Command(BaseCommand):
                 fp.write("".join(squashed_migration_lines))
 
     def confirm(self):
-        if self.interactive:
-            answer = None
-            while not answer or answer not in "yn":
-                answer = input("Do you wish to proceed? [yN] ")
-                if not answer:
-                    answer = "n"
-                    break
-                else:
-                    answer = answer[0].lower()
-            return answer == "y"
-        return True
+        if not self.interactive:
+            return True
+        answer = None
+        while not answer or answer not in "yn":
+            answer = input("Do you wish to proceed? [yN] ")
+            if not answer:
+                answer = "n"
+                break
+            else:
+                answer = answer[0].lower()
+        return answer == "y"
 
     def find_migration(self, loader, app_label, name):
         try:
@@ -178,6 +175,5 @@ class Command(BaseCommand):
             )
         except KeyError:
             raise CommandError(
-                "Cannot find a migration matching '%s' from app '%s'." %
-                (name, app_label)
+                f"Cannot find a migration matching '{name}' from app '{app_label}'."
             )

@@ -51,8 +51,9 @@ class CreateJobsTests(CreateJobsTestsMixin, TestCase):
         self.assertTrue(os.path.exists(JOBS_DIR))
         for time_period in TIME_PERIODS:
             self.assertIn(
-                'testapp_with_no_models_file/jobs/{}/__init__.py'.format(time_period),
-                m_stdout.getvalue())
+                f'testapp_with_no_models_file/jobs/{time_period}/__init__.py',
+                m_stdout.getvalue(),
+            )
 
     @patch('sys.stdout', new_callable=StringIO)
     def test_should_not_override_already_created_jobs_directory_structure_and_print_that_already_exists(self, m_stdout):
@@ -68,5 +69,6 @@ class CreateJobsTests(CreateJobsTestsMixin, TestCase):
         self.assertIn(TEST_COMMENT, open(sample_file_path).read())
         for time_period in TIME_PERIODS:
             self.assertIn(
-                'testapp_with_no_models_file/jobs/{}/__init__.py already exists'.format(time_period),
-                m_stdout.getvalue())
+                f'testapp_with_no_models_file/jobs/{time_period}/__init__.py already exists',
+                m_stdout.getvalue(),
+            )

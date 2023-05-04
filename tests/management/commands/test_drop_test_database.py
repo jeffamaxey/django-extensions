@@ -182,9 +182,9 @@ class DropTestDatabaseTests(TestCase):
             self.assertListEqual(
                 m_database.connect.return_value.cursor.return_value.execute.call_args_list,
                 [
-                    call(exists_query + "'test_test';"),
+                    call(f"{exists_query}'test_test';"),
                     call('DROP DATABASE IF EXISTS `test_test`'),
-                    call(exists_query + "'test_test_1';"),
+                    call(f"{exists_query}'test_test_1';"),
                 ],
             )
 
@@ -207,9 +207,9 @@ class DropTestDatabaseTests(TestCase):
             self.assertListEqual(
                 m_database.connect.return_value.cursor.return_value.execute.call_args_list,
                 [
-                    call(exists_query + "'test_test';"),
+                    call(f"{exists_query}'test_test';"),
                     call('DROP DATABASE IF EXISTS `test_test`'),
-                    call(exists_query + "'test_test_1';"),
+                    call(f"{exists_query}'test_test_1';"),
                 ],
             )
 
@@ -223,7 +223,7 @@ class DropTestDatabaseTests(TestCase):
         # Indicate that clone databases exist up to test_test_2
         # DROP queries return None while SELECT queries return a row count
         m_database.connect.return_value.cursor.return_value.execute.side_effect = \
-            (1, None, 1, None, 1, None, 0)
+                (1, None, 1, None, 1, None, 0)
 
         with patch.dict("sys.modules", MySQLdb=m_database):
             call_command('drop_test_database', '--noinput')
@@ -232,13 +232,13 @@ class DropTestDatabaseTests(TestCase):
         self.assertListEqual(
             m_database.connect.return_value.cursor.return_value.execute.call_args_list,
             [
-                call(exists_query + "'test_test';"),
+                call(f"{exists_query}'test_test';"),
                 call('DROP DATABASE IF EXISTS `test_test`'),
-                call(exists_query + "'test_test_1';"),
+                call(f"{exists_query}'test_test_1';"),
                 call('DROP DATABASE IF EXISTS `test_test_1`'),
-                call(exists_query + "'test_test_2';"),
+                call(f"{exists_query}'test_test_2';"),
                 call('DROP DATABASE IF EXISTS `test_test_2`'),
-                call(exists_query + "'test_test_3';"),
+                call(f"{exists_query}'test_test_3';"),
             ],
         )
 
@@ -259,9 +259,9 @@ class DropTestDatabaseTests(TestCase):
             self.assertListEqual(
                 m_cursor.execute.call_args_list,
                 [
-                    call(exists_query + "'test_test';"),
+                    call(f"{exists_query}'test_test';"),
                     call('DROP DATABASE IF EXISTS "test_test";'),
-                    call(exists_query + "'test_test_1';"),
+                    call(f"{exists_query}'test_test_1';"),
                 ],
             )
 
@@ -284,13 +284,13 @@ class DropTestDatabaseTests(TestCase):
         self.assertListEqual(
             m_cursor.execute.call_args_list,
             [
-                call(exists_query + "'test_test';"),
+                call(f"{exists_query}'test_test';"),
                 call('DROP DATABASE IF EXISTS "test_test";'),
-                call(exists_query + "'test_test_1';"),
+                call(f"{exists_query}'test_test_1';"),
                 call('DROP DATABASE IF EXISTS "test_test_1";'),
-                call(exists_query + "'test_test_2';"),
+                call(f"{exists_query}'test_test_2';"),
                 call('DROP DATABASE IF EXISTS "test_test_2";'),
-                call(exists_query + "'test_test_3';"),
+                call(f"{exists_query}'test_test_3';"),
             ],
         )
 

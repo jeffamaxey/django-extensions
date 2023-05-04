@@ -28,7 +28,8 @@ def widont(value, count=1):
     NoEffect
     """
     def replace(matchobj):
-        return force_str('&nbsp;%s' % matchobj.group(1))
+        return force_str(f'&nbsp;{matchobj.group(1)}')
+
     for i in range(count):
         value = re_widont.sub(replace, force_str(value))
     return value

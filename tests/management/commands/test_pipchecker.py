@@ -22,10 +22,8 @@ class PipCheckerTests(TestCase):
         requirements_path = './requirements.txt'
         out = StringIO()
 
-        f = open(requirements_path, 'wt')
-        f.write('not-installed==1.0.0')
-        f.close()
-
+        with open(requirements_path, 'wt') as f:
+            f.write('not-installed==1.0.0')
         call_command('pipchecker', '-r', requirements_path, stdout=out)
 
         value = out.getvalue()
@@ -39,10 +37,8 @@ class PipCheckerTests(TestCase):
         requirements_path = './requirements.txt'
         out = StringIO()
 
-        f = open(requirements_path, 'wt')
-        f.write('djangorestframework==3.0.0')
-        f.close()
-
+        with open(requirements_path, 'wt') as f:
+            f.write('djangorestframework==3.0.0')
         subprocess.call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
         pip._vendor.pkg_resources = importlib.reload(pip._vendor.pkg_resources)
         call_command('pipchecker', '-r', requirements_path, stdout=out)
@@ -58,10 +54,8 @@ class PipCheckerTests(TestCase):
         requirements_path = './requirements.txt'
         out = StringIO()
 
-        f = open(requirements_path, 'wt')
-        f.write('djangorestframework')
-        f.close()
-
+        with open(requirements_path, 'wt') as f:
+            f.write('djangorestframework')
         subprocess.call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
         pip._vendor.pkg_resources = importlib.reload(pip._vendor.pkg_resources)
         call_command('pipchecker', '-r', requirements_path, stdout=out)
@@ -77,10 +71,8 @@ class PipCheckerTests(TestCase):
         requirements_path = './requirements.txt'
         out = StringIO()
 
-        f = open(requirements_path, 'wt')
-        f.write('git+https://github.com/jmrivas86/django-json-widget')
-        f.close()
-
+        with open(requirements_path, 'wt') as f:
+            f.write('git+https://github.com/jmrivas86/django-json-widget')
         subprocess.call([sys.executable, '-m', 'pip', 'install', 'django-json-widget'])
         pip._vendor.pkg_resources = importlib.reload(pip._vendor.pkg_resources)
         call_command('pipchecker', '-r', requirements_path, stdout=out)
@@ -99,10 +91,8 @@ class PipCheckerTests(TestCase):
         requirements_path = './requirements.txt'
         out = StringIO()
 
-        f = open(requirements_path, 'wt')
-        f.write('djangorestframework==3.0.0')
-        f.close()
-
+        with open(requirements_path, 'wt') as f:
+            f.write('djangorestframework==3.0.0')
         subprocess.call([sys.executable, '-m', 'pip', 'install', '-r', requirements_path])
         importlib.reload(pkg_resources)
         call_command('pipchecker', '-r', requirements_path, stdout=out)

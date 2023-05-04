@@ -15,19 +15,19 @@ class AutomaticShellPlusImportsTestCase(TestCase):
         self.imported_objects = {}  # type: Dict[str, Type]
         self.output = ""
 
-    def get_all_names_for_class(self, model_to_find_occurrences):  # type: (Type) -> Set[str]
+    def get_all_names_for_class(self, model_to_find_occurrences):    # type: (Type) -> Set[str]
         """
         Returns all names under current class is imported.
         :param model_to_find_occurrences: class to find names
         :return: set of names under class is imported.
         """
-        result = set()
-        for name, model_class in self.imported_objects.items():
-            if model_class == model_to_find_occurrences:
-                result.add(name)
-        return result
+        return {
+            name
+            for name, model_class in self.imported_objects.items()
+            if model_class == model_to_find_occurrences
+        }
 
-    def assert_imported_under_names(self, model_class, names_under_model_is_available):  # type: (Type, Set[str]) -> ()
+    def assert_imported_under_names(self, model_class, names_under_model_is_available):    # type: (Type, Set[str]) -> ()
         """
         Function which asserts that class is available under given names and not available under any other name.
         :param model_class: class to assert availability.
@@ -42,7 +42,7 @@ class AutomaticShellPlusImportsTestCase(TestCase):
                     if name == model_class.__name__:
                         expected_output = name
                     else:
-                        expected_output = "%s (as %s)" % (model_class.__name__, name)
+                        expected_output = f"{model_class.__name__} (as {name})"
                     line = line.replace(expected_output, '', 1)
                 self.assertNotIn(line, model_class.__name__)
 

@@ -49,9 +49,7 @@ def format_block(block, nlspaces=0):
     while lines and not lines[-1]:
         del lines[-1]
 
-    # look at first line to see how much indentation to trim
-    ws = re.match(r'\s*', lines[0]).group(0)
-    if ws:
+    if ws := re.match(r'\s*', lines[0])[0]:
         lines = map(lambda x: x.replace(ws, '', 1), lines)
 
     # remove leading/trailing blank lines (after leading ws removal)
@@ -62,7 +60,7 @@ def format_block(block, nlspaces=0):
         del lines[-1]
 
     # account for user-specified leading spaces
-    flines = ['%s%s' % (' ' * nlspaces, line) for line in lines]
+    flines = [f"{' ' * nlspaces}{line}" for line in lines]
 
     return '\n'.join(flines) + '\n'
 
@@ -76,15 +74,11 @@ class Command(BaseCommand):
 
     @signalcommand
     def handle(self, *args, **options):
-        if options['no_color']:
-            style = no_style()
-        else:
-            style = color_style()
-
+        style = no_style() if options['no_color'] else color_style()
         for app_config in apps.get_app_configs():
             app = app_config.name
             try:
-                templatetag_mod = __import__(app + '.templatetags', {}, {}, [''])
+                templatetag_mod = __import__(f'{app}.templatetags', {}, {}, [''])
             except ImportError:
                 continue
             mod_path = inspect.getabsfile(templatetag_mod)
@@ -97,17 +91,16 @@ class Command(BaseCommand):
                     continue
 
                 if not app_labeled:
-                    self.add_result('App: %s' % style.MODULE_NAME(app))
+                    self.add_result(f'App: {style.MODULE_NAME(app)}')
                     app_labeled = True
-                self.add_result('load: %s' % style.TAGLIB(taglib), 1)
+                self.add_result(f'load: {style.TAGLIB(taglib)}', 1)
                 libstuff = [
                     (lib.tags, 'Tag:', style.TAG),
                     (lib.filters, 'Filter:', style.FILTER)
                 ]
                 for items, label, style_func in libstuff:
                     for item in items:
-                        self.add_result('%s %s' % (label, style_func(item)), 2)
-                        doc = inspect.getdoc(items[item])
-                        if doc:
+                        self.add_result(f'{label} {style_func(item)}', 2)
+                        if doc := inspect.getdoc(items[item]):
                             self.add_result(format_block(doc, 12))
         return self.results

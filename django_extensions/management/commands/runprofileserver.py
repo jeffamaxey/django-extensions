@@ -59,16 +59,8 @@ class KCacheGrind:
             out_file.write('%d %d\n' % (code.co_firstlineno, inlinetime))
 
         # recursive calls are counted in entry.calls
-        if entry.calls:
-            calls = entry.calls
-        else:
-            calls = []
-
-        if isinstance(code, str):
-            lineno = 0
-        else:
-            lineno = code.co_firstlineno
-
+        calls = entry.calls if entry.calls else []
+        lineno = 0 if isinstance(code, str) else code.co_firstlineno
         for subentry in calls:
             self._subentry(lineno, subentry)
         out_file.write("\n")
@@ -169,7 +161,7 @@ class Command(BaseCommand):
         use_reloader = options['use_reloader']
         shutdown_message = options.get('shutdown_message', '')
         no_media = options['no_media']
-        quit_command = (sys.platform == 'win32') and 'CTRL-BREAK' or 'CONTROL-C'
+        quit_command = 'CTRL-BREAK' if sys.platform == 'win32' else 'CONTROL-C'
 
         def inner_run():
             import os
@@ -223,10 +215,7 @@ class Command(BaseCommand):
                     path_name = path_info.strip("/").replace('/', '.') or "root"
                     profname = "%s.%d.prof" % (path_name, time.time())
                     profname = os.path.join(prof_path, profname)
-                    if USE_CPROFILE:
-                        prof = cProfile.Profile()
-                    else:
-                        prof = hotshot.Profile(profname)
+                    prof = cProfile.Profile() if USE_CPROFILE else hotshot.Profile(profname)
                     start = datetime.now()
                     try:
                         return prof.runcall(inner_handler, environ, start_response)
@@ -241,18 +230,19 @@ class Command(BaseCommand):
                         elif USE_CPROFILE:
                             prof.dump_stats(profname)
                         profname2 = prof_file.format(path=path_name, duration=int(elapms), time=int(time.time()))
-                        profname2 = os.path.join(prof_path, "%s.prof" % profname2)
+                        profname2 = os.path.join(prof_path, f"{profname2}.prof")
                         if not USE_CPROFILE:
                             prof.close()
                         os.rename(profname, profname2)
+
                 return handler
 
             print("Performing system checks...")
             self.check(display_num_errors=True)
 
             print("\nDjango version %s, using settings %r" % (django.get_version(), settings.SETTINGS_MODULE))
-            print("Development server is running at http://%s:%s/" % (addr, port))
-            print("Quit the server with %s." % quit_command)
+            print(f"Development server is running at http://{addr}:{port}/")
+            print(f"Quit the server with {quit_command}.")
             try:
                 handler = get_internal_wsgi_application()
                 if USE_STATICFILES:
@@ -273,13 +263,14 @@ class Command(BaseCommand):
                     error_text = ERRORS[e.errno]
                 except (AttributeError, KeyError):
                     error_text = str(e)
-                sys.stderr.write(self.style.ERROR("Error: %s" % error_text) + '\n')
+                sys.stderr.write(self.style.ERROR(f"Error: {error_text}") + '\n')
                 # Need to use an OS exit because sys.exit doesn't work in a thread
                 os._exit(1)
             except KeyboardInterrupt:
                 if shutdown_message:
                     print(shutdown_message)
                 sys.exit(0)
+
         if use_reloader:
             try:
                 from django.utils.autoreload import run_with_reloader

@@ -29,8 +29,9 @@ class Command(BaseCommand):
             help='Use this router-database other then default (deprecated: use --database instead)'
         )
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
         parser.add_argument(
             '-s', '--style', action='store',
@@ -71,7 +72,7 @@ class Command(BaseCommand):
         dsn_style = options['style']
 
         if dbinfo is None:
-            raise CommandError("Unknown database %s" % database)
+            raise CommandError(f"Unknown database {database}")
 
         engine = dbinfo.get('ENGINE')
         dbuser = dbinfo.get('USER')
@@ -83,7 +84,7 @@ class Command(BaseCommand):
         dsn = []
 
         if engine in SQLITE_ENGINES:
-            dsn.append('{}'.format(dbname))
+            dsn.append(f'{dbname}')
         elif engine in MYSQL_ENGINES:
             dsn.append(self._mysql(dbhost, dbport, dbname, dbuser, dbpass))
         elif engine in POSTGRESQL_ENGINES:
@@ -96,7 +97,7 @@ class Command(BaseCommand):
             sys.stdout.write(self.style.SQL_TABLE("DSN for database '%s' with engine '%s':\n" % (database, engine)))
 
         for output in dsn:
-            sys.stdout.write("{}\n".format(output))
+            sys.stdout.write(f"{output}\n")
 
     def _mysql(self, dbhost, dbport, dbname, dbuser, dbpass):
         dsnstr = 'host="{0}", db="{2}", user="{3}", passwd="{4}"'

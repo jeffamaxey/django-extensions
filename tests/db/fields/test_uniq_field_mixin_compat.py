@@ -133,9 +133,7 @@ class UniqFieldMixinCompatTestCase(TestCase):
     def test_find_unique(self):
         def filter_func(*args, **kwargs):
             uniq_field = kwargs.get('uniq_field')
-            if uniq_field == 'a':
-                return mocked_qs
-            return None
+            return mocked_qs if uniq_field == 'a' else None
 
         mocked_qs = mock.Mock(spec=PostWithUniqFieldCompat.objects)
         mocked_qs.filter.side_effect = filter_func

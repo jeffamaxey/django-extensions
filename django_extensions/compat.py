@@ -29,8 +29,7 @@ def load_tag_library(libname):
 
 def get_template_setting(template_key, default=None):
     """ Read template settings """
-    templates_var = getattr(settings, 'TEMPLATES', None)
-    if templates_var:
+    if templates_var := getattr(settings, 'TEMPLATES', None):
         for tdict in templates_var:
             if template_key in tdict:
                 return tdict[template_key]

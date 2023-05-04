@@ -58,8 +58,10 @@ class Command(BaseCommand):
 
         if options['fail']:
             for setting_name in setting_names:
-                if not any(fnmatch.fnmatchcase(key, setting_name) for key in settings_dct.keys()):
-                    raise CommandError('%s not found in settings.' % setting_name)
+                if not any(
+                    fnmatch.fnmatchcase(key, setting_name) for key in settings_dct
+                ):
+                    raise CommandError(f'{setting_name} not found in settings.')
 
         output_format = options['format']
         indent = options['indent']
@@ -74,7 +76,7 @@ class Command(BaseCommand):
             pprint(settings_dct)
         elif output_format == 'text':
             for key, value in settings_dct.items():
-                print("%s = %s" % (key, value))
+                print(f"{key} = {value}")
         elif output_format == 'value':
             for value in settings_dct.values():
                 print(value)

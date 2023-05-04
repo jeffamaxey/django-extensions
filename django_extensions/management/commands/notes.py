@@ -43,20 +43,21 @@ class Command(BaseCommand):
                         annotation_lines = []
                         with open(fpath, 'r') as fd:
                             i = 0
-                            for line in fd.readlines():
+                            for line in fd:
                                 i += 1
                                 if ANNOTATION_RE.search(line):
                                     tag, msg = ANNOTATION_RE.findall(line)[0]
-                                    if options['tag']:
-                                        if tag not in map(str.upper, map(str, options['tag'])):
-                                            break
+                                    if options['tag'] and tag not in map(
+                                        str.upper, map(str, options['tag'])
+                                    ):
+                                        break
 
                                     if ANNOTATION_END_RE.search(msg.strip()):
                                         msg = ANNOTATION_END_RE.findall(msg.strip())[0][0]
 
                                     annotation_lines.append("[%3s] %-5s %s" % (i, tag, msg.strip()))
                             if annotation_lines:
-                                self.stdout.write("%s:" % fpath)
+                                self.stdout.write(f"{fpath}:")
                                 for annotation in annotation_lines:
-                                    self.stdout.write("  * %s" % annotation)
+                                    self.stdout.write(f"  * {annotation}")
                                 self.stdout.write("")

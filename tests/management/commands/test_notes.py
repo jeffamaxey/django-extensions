@@ -34,8 +34,8 @@ def test_with_template_dirs(capsys, settings, tmpdir_factory):
     call_command('notes', '--tag=FIXME')
     out, err = capsys.readouterr()
 
-    assert '{}:\n  * [  1] FIXME This is a comment.'.format(template_path) in out
-    assert '{}:\n  * [  1] FIXME This is a second comment.'.format(sub_path) in out
+    assert f'{template_path}:\n  * [  1] FIXME This is a comment.' in out
+    assert f'{sub_path}:\n  * [  1] FIXME This is a second comment.' in out
     assert 'TODO Do not show this.' not in out
 
 
@@ -51,5 +51,5 @@ def test_with_template_sub_dirs(capsys, settings, tmpdir_factory):
     call_command('notes', '--tag=FIXME')
     out, err = capsys.readouterr()
 
-    assert '{}:\n  * [  1] FIXME This is a comment.'.format(template_path) in out
+    assert f'{template_path}:\n  * [  1] FIXME This is a comment.' in out
     assert 'TODO Do not show this.' not in out

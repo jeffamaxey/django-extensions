@@ -33,8 +33,9 @@ class Command(BaseCommand):
             help='Use this router-database instead of the one defined in settings.py'
         )
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
         parser.add_argument(
             '-S', '--schema', action='store', dest='schema', default='public',
@@ -49,7 +50,7 @@ class Command(BaseCommand):
 
         dbinfo = settings.DATABASES.get(database)
         if dbinfo is None:
-            raise CommandError("Unknown database %s" % database)
+            raise CommandError(f"Unknown database {database}")
 
         engine = dbinfo.get('ENGINE')
         if engine not in POSTGRESQL_ENGINES:
@@ -75,5 +76,5 @@ Type 'yes' to continue, or 'no' to cancel: """.format(schema, database_name))
             return
 
         with connections[database].cursor() as cursor:
-            cursor.execute("DROP SCHEMA {} CASCADE".format(schema))
-            cursor.execute("CREATE SCHEMA {}".format(schema))
+            cursor.execute(f"DROP SCHEMA {schema} CASCADE")
+            cursor.execute(f"CREATE SCHEMA {schema}")

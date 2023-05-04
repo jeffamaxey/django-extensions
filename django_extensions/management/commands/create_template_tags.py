@@ -31,7 +31,7 @@ class Command(AppCommand):
         app_dir = app_config.path
         tag_library_name = options['tag_library_name']
         if tag_library_name == 'appname_tags':
-            tag_library_name = '%s_tags' % os.path.basename(app_dir)
+            tag_library_name = f'{os.path.basename(app_dir)}_tags'
         copy_template('template_tags_template', app_dir, tag_library_name)
 
 
@@ -60,10 +60,9 @@ def copy_template(template_name, copy_to, tag_library_name):
                 if os.path.exists(path_new):
                     continue
             path_new = path_new.rstrip(".tmpl")
-            fp_old = open(path_old, 'r')
-            fp_new = open(path_new, 'w')
-            fp_new.write(fp_old.read())
-            fp_old.close()
+            with open(path_old, 'r') as fp_old:
+                fp_new = open(path_new, 'w')
+                fp_new.write(fp_old.read())
             fp_new.close()
             try:
                 shutil.copymode(path_old, path_new)

@@ -25,19 +25,13 @@ def full_name(**kwargs):
     first_name = kwargs.get('first_name')
     last_name = kwargs.get('last_name')
 
-    name = " ".join(n for n in [first_name, last_name] if n)
-    if name:
+    if name := " ".join(n for n in [first_name, last_name] if n):
         return name
 
-    name = kwargs.get('name')
-    if name:
+    if name := kwargs.get('name'):
         return name
 
-    username = kwargs.get('username')
-    if username:
-        return username
-
-    return ""
+    return username if (username := kwargs.get('username')) else ""
 
 
 class Command(BaseCommand):
@@ -59,8 +53,12 @@ class Command(BaseCommand):
             help='Limit to users which are part of the supplied group name',
         ),
         parser.add_argument(
-            '--format', '-f', action='store', dest='format', default=FORMATS[0],
-            help="output format. May be one of %s." % ", ".join(FORMATS),
+            '--format',
+            '-f',
+            action='store',
+            dest='format',
+            default=FORMATS[0],
+            help=f'output format. May be one of {", ".join(FORMATS)}.',
         )
 
     def full_name(self, **kwargs):
@@ -71,11 +69,11 @@ class Command(BaseCommand):
         if len(args) > 1:
             raise CommandError("extra arguments supplied")
         group = options['group']
-        if group and not Group.objects.filter(name=group).count() == 1:
+        if group and Group.objects.filter(name=group).count() != 1:
             names = "', '".join(g['name'] for g in Group.objects.values('name'))
             if names:
-                names = "'" + names + "'."
-            raise CommandError("Unknown group '" + group + "'. Valid group names are: " + names)
+                names = f"'{names}'."
+            raise CommandError(f"Unknown group '{group}'. Valid group names are: {names}")
 
         UserModel = get_user_model()
         order_by = getattr(settings, 'EXPORT_EMAILS_ORDER_BY', ['last_name', 'first_name', 'username', 'email'])

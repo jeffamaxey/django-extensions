@@ -239,8 +239,8 @@ class CustomFuncPrecedenceSluggedTestModel(models.Model):
     def custom_slug_one(self, content):
         return content.upper()
 
-    def custom_slug_two(content):
-        return content.lower()
+    def custom_slug_two(self):
+        return self.lower()
 
     slugify_function = custom_slug_one
 
@@ -265,7 +265,7 @@ class SluggedTestNoOverwriteOnAddModel(models.Model):
 
 
 def get_readable_title(instance):
-    return "The title is {}".format(instance.title)
+    return f"The title is {instance.title}"
 
 
 class ModelMethodSluggedTestModel(models.Model):

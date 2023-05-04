@@ -59,5 +59,9 @@ class Command(BaseCommand):
                             old_str = str(permission)
                             permission.name = name
                             if options['verbosity'] >= 2:
-                                self.stdout.write(self.style.SUCCESS("Update permission '%s' to '%s'" % (old_str, permission)))
+                                self.stdout.write(
+                                    self.style.SUCCESS(
+                                        f"Update permission '{old_str}' to '{permission}'"
+                                    )
+                                )
                             permission.save()

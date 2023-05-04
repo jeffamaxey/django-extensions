@@ -17,11 +17,15 @@ def monkey_patch_cursordebugwrapper(print_sql=None, print_sql_location=False, tr
         yield
     else:
         if truncate is None:
-            truncate = getattr(settings, '%s_PRINT_SQL_TRUNCATE' % confprefix, DEFAULT_PRINT_SQL_TRUNCATE_CHARS)
+            truncate = getattr(
+                settings,
+                f'{confprefix}_PRINT_SQL_TRUNCATE',
+                DEFAULT_PRINT_SQL_TRUNCATE_CHARS,
+            )
 
         # Code orginally from http://gist.github.com/118990
         sqlparse = None
-        if getattr(settings, '%s_SQLPARSE_ENABLED' % confprefix, True):
+        if getattr(settings, f'{confprefix}_SQLPARSE_ENABLED', True):
             try:
                 import sqlparse
 
@@ -29,18 +33,28 @@ def monkey_patch_cursordebugwrapper(print_sql=None, print_sql_location=False, tr
                     reindent_aligned=True,
                     truncate_strings=500,
                 )
-                sqlparse_format_kwargs = getattr(settings, '%s_SQLPARSE_FORMAT_KWARGS' % confprefix, sqlparse_format_kwargs_defaults)
+                sqlparse_format_kwargs = getattr(
+                    settings,
+                    f'{confprefix}_SQLPARSE_FORMAT_KWARGS',
+                    sqlparse_format_kwargs_defaults,
+                )
             except ImportError:
                 sqlparse = None
 
-        pygments = None
-        if getattr(settings, '%s_PYGMENTS_ENABLED' % confprefix, True):
+        if getattr(settings, f'{confprefix}_PYGMENTS_ENABLED', True):
+            pygments = None
             try:
                 import pygments.lexers
                 import pygments.formatters
 
-                pygments_formatter = getattr(settings, '%s_PYGMENTS_FORMATTER' % confprefix, pygments.formatters.TerminalFormatter)
-                pygments_formatter_kwargs = getattr(settings, '%s_PYGMENTS_FORMATTER_KWARGS' % confprefix, {})
+                pygments_formatter = getattr(
+                    settings,
+                    f'{confprefix}_PYGMENTS_FORMATTER',
+                    pygments.formatters.TerminalFormatter,
+                )
+                pygments_formatter_kwargs = getattr(
+                    settings, f'{confprefix}_PYGMENTS_FORMATTER_KWARGS', {}
+                )
             except ImportError:
                 pass
 
@@ -78,9 +92,12 @@ def monkey_patch_cursordebugwrapper(print_sql=None, print_sql_location=False, tr
 
         try:
             from django.db import connections
-            _force_debug_cursor = {}
-            for connection_name in connections:
-                _force_debug_cursor[connection_name] = connections[connection_name].force_debug_cursor
+            _force_debug_cursor = {
+                connection_name: connections[
+                    connection_name
+                ].force_debug_cursor
+                for connection_name in connections
+            }
         except Exception:
             connections = None
 

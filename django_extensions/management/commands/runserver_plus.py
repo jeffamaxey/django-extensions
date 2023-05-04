@@ -165,10 +165,22 @@ class Command(BaseCommand):
                                  'Either --cert-file or --key-file must be provided to use SSL.')
         parser.add_argument('--extra-file', dest='extra_files', action="append", type=str, default=[],
                             help='auto-reload whenever the given file changes too (can be specified multiple times)')
-        parser.add_argument('--reloader-interval', dest='reloader_interval', action="store", type=int, default=DEFAULT_POLLER_RELOADER_INTERVAL,
-                            help='After how many seconds auto-reload should scan for updates in poller-mode [default=%s]' % DEFAULT_POLLER_RELOADER_INTERVAL)
-        parser.add_argument('--reloader-type', dest='reloader_type', action="store", type=str, default=DEFAULT_POLLER_RELOADER_TYPE,
-                            help='Werkzeug reloader type [options are auto, watchdog, or stat, default=%s]' % DEFAULT_POLLER_RELOADER_TYPE)
+        parser.add_argument(
+            '--reloader-interval',
+            dest='reloader_interval',
+            action="store",
+            type=int,
+            default=DEFAULT_POLLER_RELOADER_INTERVAL,
+            help=f'After how many seconds auto-reload should scan for updates in poller-mode [default={DEFAULT_POLLER_RELOADER_INTERVAL}]',
+        )
+        parser.add_argument(
+            '--reloader-type',
+            dest='reloader_type',
+            action="store",
+            type=str,
+            default=DEFAULT_POLLER_RELOADER_TYPE,
+            help=f'Werkzeug reloader type [options are auto, watchdog, or stat, default={DEFAULT_POLLER_RELOADER_TYPE}]',
+        )
         parser.add_argument('--pdb', action='store_true', dest='pdb', default=False,
                             help='Drop into pdb shell at the start of any view.')
         parser.add_argument('--ipdb', action='store_true', dest='ipdb', default=False,
@@ -249,7 +261,7 @@ class Command(BaseCommand):
                 else:
                     import pdb
                     p = pdb
-                print("Exception occured: %s, %s" % (exc_type, exc_value), file=sys.stderr)
+                print(f"Exception occured: {exc_type}, {exc_value}", file=sys.stderr)
                 p.post_mortem(tb)
 
         # usurp django's handler
@@ -282,8 +294,7 @@ class Command(BaseCommand):
                     self.use_ipv6 = True
                     self._raw_ipv6 = True
                 elif self.use_ipv6 and not _fqdn:
-                    raise CommandError('"%s" is not a valid IPv6 address.'
-                                       % self.addr)
+                    raise CommandError(f'"{self.addr}" is not a valid IPv6 address.')
         if not self.addr:
             self.addr = '::1' if self.use_ipv6 else '127.0.0.1'
             self._raw_ipv6 = True
@@ -374,14 +385,13 @@ class Command(BaseCommand):
         else:
             ssl_context = None
 
-        bind_url = "%s://%s:%s/" % (
-            "https" if ssl_context else "http", self.addr if not self._raw_ipv6 else '[%s]' % self.addr, self.port)
+        bind_url = f"""{"https" if ssl_context else "http"}://{f'[{self.addr}]' if self._raw_ipv6 else self.addr}:{self.port}/"""
 
         if self.show_startup_messages:
             print("\nDjango version %s, using settings %r" % (django.get_version(), settings.SETTINGS_MODULE))
-            print("Development server is running at %s" % (bind_url,))
+            print(f"Development server is running at {bind_url}")
             print("Using the Werkzeug debugger (http://werkzeug.pocoo.org/)")
-            print("Quit the server with %s." % quit_command)
+            print(f"Quit the server with {quit_command}.")
 
         if open_browser:
             webbrowser.open(bind_url)
@@ -459,11 +469,7 @@ def set_werkzeug_log_color():
 
     def werk_log(self, type, message, *args):
         try:
-            msg = '%s - - [%s] %s' % (
-                self.address_string(),
-                self.log_date_time_string(),
-                message % args,
-            )
+            msg = f'{self.address_string()} - - [{self.log_date_time_string()}] {message % args}'
             http_code = str(args[1])
         except Exception:
             return _orig_log(type, message, *args)

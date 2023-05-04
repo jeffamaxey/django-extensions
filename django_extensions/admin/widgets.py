@@ -51,12 +51,11 @@ class ForeignKeySearchInput(ForeignKeyRawIdWidget):
         opts = self.rel.model._meta
         app_label = opts.app_label
         model_name = opts.object_name.lower()
-        related_url = reverse('admin:%s_%s_changelist' % (app_label, model_name))
+        related_url = reverse(f'admin:{app_label}_{model_name}_changelist')
         if not self.search_path:
             self.search_path = urllib.parse.urljoin(related_url, 'foreignkey_autocomplete/')
-        params = self.url_parameters()
-        if params:
-            url = '?' + '&amp;'.join(['%s=%s' % (k, v) for k, v in params.items()])
+        if params := self.url_parameters():
+            url = '?' + '&amp;'.join([f'{k}={v}' for k, v in params.items()])
         else:
             url = ''
 
@@ -65,11 +64,7 @@ class ForeignKeySearchInput(ForeignKeyRawIdWidget):
         # Call the TextInput render method directly to have more control
         output = [forms.TextInput.render(self, name, value, attrs)]
 
-        if value:
-            label = self.label_for_value(value)
-        else:
-            label = ''
-
+        label = self.label_for_value(value) if value else ''
         context = {
             'url': url,
             'related_url': related_url,
@@ -80,11 +75,17 @@ class ForeignKeySearchInput(ForeignKeyRawIdWidget):
             'label': label,
             'name': name,
         }
-        output.append(render_to_string(self.widget_template or (
-            'django_extensions/widgets/%s/%s/foreignkey_searchinput.html' % (app_label, model_name),
-            'django_extensions/widgets/%s/foreignkey_searchinput.html' % app_label,
-            'django_extensions/widgets/foreignkey_searchinput.html',
-        ), context))
+        output.append(
+            render_to_string(
+                self.widget_template
+                or (
+                    f'django_extensions/widgets/{app_label}/{model_name}/foreignkey_searchinput.html',
+                    f'django_extensions/widgets/{app_label}/foreignkey_searchinput.html',
+                    'django_extensions/widgets/foreignkey_searchinput.html',
+                ),
+                context,
+            )
+        )
         output.reverse()
 
         return mark_safe(''.join(output))

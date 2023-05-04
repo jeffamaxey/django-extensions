@@ -83,24 +83,24 @@ class Command(BaseCommand):
                 django_apps.get_models(), key=lambda x: (x._meta.app_label, x._meta.object_name), reverse=False
             )
         for model in model_list:
-            self.stdout.write(INFO(model._meta.app_label + "." + model._meta.object_name))
-            self.stdout.write(BOLD(HALFTAB + "Fields:"))
+            self.stdout.write(INFO(f"{model._meta.app_label}.{model._meta.object_name}"))
+            self.stdout.write(BOLD(f"{HALFTAB}Fields:"))
 
             for field in model._meta.get_fields():
                 field_info = TAB + field.name + " -"
 
                 if FIELD_CLASS:
                     try:
-                        field_info += " " + field.__class__.__name__
+                        field_info += f" {field.__class__.__name__}"
                     except TypeError:
                         field_info += (WARN(" TypeError (field_class)"))
                     except AttributeError:
                         field_info += (WARN(" AttributeError (field_class)"))
-                if FIELD_CLASS and DB_TYPE:
-                    field_info += ","
+                    if DB_TYPE:
+                        field_info += ","
                 if DB_TYPE:
                     try:
-                        field_info += " " + field.db_type(connection=connection)
+                        field_info += f" {field.db_type(connection=connection)}"
                     except TypeError:
                         field_info += (WARN(" TypeError (db_type)"))
                     except AttributeError:
@@ -109,32 +109,25 @@ class Command(BaseCommand):
                 self.stdout.write(field_info)
 
             if ALL_METHODS:
-                self.stdout.write(BOLD(HALFTAB + "Methods (all):"))
+                self.stdout.write(BOLD(f"{HALFTAB}Methods (all):"))
             else:
-                self.stdout.write(BOLD(HALFTAB + "Methods (non-private/internal):"))
+                self.stdout.write(BOLD(f"{HALFTAB}Methods (non-private/internal):"))
 
             for method_name in dir(model):
                 try:
                     method = getattr(model, method_name)
                     if ALL_METHODS:
                         if callable(method) and not method_name[0].isupper():
-                            if SIGNATURE:
-                                signature = inspect.signature(method)
-                            else:
-                                signature = "()"
+                            signature = inspect.signature(method) if SIGNATURE else "()"
                             self.stdout.write(TAB + method_name + str(signature))
-                    else:
-                        if (
+                    elif (
                             callable(method)
                             and not method_name.startswith("_")
                             and method_name not in default_methods
                             and not method_name[0].isupper()
                         ):
-                            if SIGNATURE:
-                                signature = inspect.signature(method)
-                            else:
-                                signature = "()"
-                            self.stdout.write(TAB + method_name + str(signature))
+                        signature = inspect.signature(method) if SIGNATURE else "()"
+                        self.stdout.write(TAB + method_name + str(signature))
                 except AttributeError:
                     self.stdout.write(TAB + method_name + WARN(" - AttributeError"))
                 except ValueError:

@@ -58,8 +58,11 @@ class ForeignKeyAutocompleteAdminMixin:
             return update_wrapper(wrapper, view)
 
         return [
-            path('foreignkey_autocomplete/', wrap(self.foreignkey_autocomplete),
-                name='%s_%s_autocomplete' % (self.model._meta.app_label, self.model._meta.model_name))
+            path(
+                'foreignkey_autocomplete/',
+                wrap(self.foreignkey_autocomplete),
+                name=f'{self.model._meta.app_label}_{self.model._meta.model_name}_autocomplete',
+            )
         ] + super().get_urls()
 
     def foreignkey_autocomplete(self, request):
@@ -82,13 +85,13 @@ class ForeignKeyAutocompleteAdminMixin:
             def construct_search(field_name):
                 # use different lookup methods depending on the notation
                 if field_name.startswith('^'):
-                    return "%s__istartswith" % field_name[1:]
+                    return f"{field_name[1:]}__istartswith"
                 elif field_name.startswith('='):
-                    return "%s__iexact" % field_name[1:]
+                    return f"{field_name[1:]}__iexact"
                 elif field_name.startswith('@'):
-                    return "%s__search" % field_name[1:]
+                    return f"{field_name[1:]}__search"
                 else:
-                    return "%s__icontains" % field_name
+                    return f"{field_name}__icontains"
 
             model = apps.get_model(app_label, model_name)
 
@@ -109,7 +112,7 @@ class ForeignKeyAutocompleteAdminMixin:
                 if self.autocomplete_limit:
                     queryset = queryset[:self.autocomplete_limit]
 
-                data = ''.join([str('%s|%s\n') % (to_string_function(f), f.pk) for f in queryset])
+                data = ''.join(['%s|%s\n' % (to_string_function(f), f.pk) for f in queryset])
             elif object_pk:
                 try:
                     obj = queryset.get(pk=object_pk)
@@ -130,8 +133,7 @@ class ForeignKeyAutocompleteAdminMixin:
         return None
 
     def get_help_text(self, field_name, model_name):
-        searchable_fields = self.related_search_fields.get(field_name, None)
-        if searchable_fields:
+        if searchable_fields := self.related_search_fields.get(field_name, None):
             help_kwargs = {
                 'model_name': model_name,
                 'field_list': get_text_list(searchable_fields, _('and')),
@@ -147,7 +149,7 @@ class ForeignKeyAutocompleteAdminMixin:
         if isinstance(db_field, models.ForeignKey) and db_field.name in self.related_search_fields:
             help_text = self.get_help_text(db_field.name, db_field.remote_field.model._meta.object_name)
             if kwargs.get('help_text'):
-                help_text = str('%s %s') % (kwargs['help_text'], help_text)
+                help_text = f"{kwargs['help_text']} {help_text}"
             kwargs['widget'] = ForeignKeySearchInput(db_field.remote_field, self.related_search_fields[db_field.name])
             kwargs['help_text'] = help_text
         return super().formfield_for_dbfield(db_field, **kwargs)

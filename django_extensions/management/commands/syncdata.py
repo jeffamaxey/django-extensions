@@ -23,7 +23,7 @@ from django_extensions.management.utils import signalcommand
 
 
 def humanize(dirname):
-    return "'%s'" % dirname if dirname else 'absolute path'
+    return f"'{dirname}'" if dirname else 'absolute path'
 
 
 class SyncDataError(Exception):
@@ -63,8 +63,8 @@ class Command(BaseCommand):
         """
         for class_ in objects_to_keep.keys():
             current = class_.objects.all()
-            current_ids = set(x.pk for x in current)
-            keep_ids = set(x.pk for x in objects_to_keep[class_])
+            current_ids = {x.pk for x in current}
+            keep_ids = {x.pk for x in objects_to_keep[class_]}
 
             remove_these_ones = current_ids.difference(keep_ids)
             if remove_these_ones:
@@ -72,7 +72,7 @@ class Command(BaseCommand):
                     if obj.pk in remove_these_ones:
                         obj.delete()
                         if verbosity >= 2:
-                            print("Deleted object: %s" % str(obj))
+                            print(f"Deleted object: {str(obj)}")
 
             if verbosity > 0 and remove_these_ones:
                 num_deleted = len(remove_these_ones)
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 else:
                     type_deleted = str(class_._meta.verbose_name)
 
-                print("Deleted %s %s" % (str(num_deleted), type_deleted))
+                print(f"Deleted {num_deleted} {type_deleted}")
 
     @signalcommand
     def handle(self, *args, **options):
@@ -130,12 +130,13 @@ class Command(BaseCommand):
                 else:
                     formats = []
 
-            if formats:
-                if verbosity > 1:
-                    print("Loading '%s' fixtures..." % fixture_name)
-            else:
-                raise SyncDataError("Problem installing fixture '%s': %s is not a known serialization format." % (fixture_name, format_))
+            if not formats:
+                raise SyncDataError(
+                    f"Problem installing fixture '{fixture_name}': {format_} is not a known serialization format."
+                )
 
+            if verbosity > 1:
+                print(f"Loading '{fixture_name}' fixtures...")
             if os.path.isabs(fixture_name):
                 fixture_dirs = [fixture_name]
             else:
@@ -143,23 +144,29 @@ class Command(BaseCommand):
 
             for fixture_dir in fixture_dirs:
                 if verbosity > 1:
-                    print("Checking %s for fixtures..." % humanize(fixture_dir))
+                    print(f"Checking {humanize(fixture_dir)} for fixtures...")
 
                 label_found = False
                 for format_ in formats:
                     if verbosity > 1:
-                        print("Trying %s for %s fixture '%s'..." % (humanize(fixture_dir), format_, fixture_name))
+                        print(
+                            f"Trying {humanize(fixture_dir)} for {format_} fixture '{fixture_name}'..."
+                        )
                     try:
                         full_path = os.path.join(fixture_dir, '.'.join([fixture_name, format_]))
                         fixture = open(full_path, 'r')
                         if label_found:
                             fixture.close()
-                            raise SyncDataError("Multiple fixtures named '%s' in %s. Aborting." % (fixture_name, humanize(fixture_dir)))
+                            raise SyncDataError(
+                                f"Multiple fixtures named '{fixture_name}' in {humanize(fixture_dir)}. Aborting."
+                            )
                         else:
                             fixture_count += 1
                             objects_per_fixture.append(0)
                             if verbosity > 0:
-                                print("Installing %s fixture '%s' from %s." % (format_, fixture_name, humanize(fixture_dir)))
+                                print(
+                                    f"Installing {format_} fixture '{fixture_name}' from {humanize(fixture_dir)}."
+                                )
                             try:
                                 objects_to_keep = {}
                                 objects = list(serializers.deserialize(format_, fixture))
@@ -196,18 +203,19 @@ class Command(BaseCommand):
                         raise e
                     except Exception:
                         if verbosity > 1:
-                            print("No %s fixture '%s' in %s." % (format_, fixture_name, humanize(fixture_dir)))
+                            print(f"No {format_} fixture '{fixture_name}' in {humanize(fixture_dir)}.")
 
         # If any of the fixtures we loaded contain 0 objects, assume that an
         # error was encountered during fixture loading.
         if 0 in objects_per_fixture:
-            raise SyncDataError("No fixture data found for '%s'. (File format may be invalid.)" % fixture_name)
+            raise SyncDataError(
+                f"No fixture data found for '{fixture_name}'. (File format may be invalid.)"
+            )
 
-        # If we found even one object in a fixture, we need to reset the
-        # database sequences.
-        if object_count > 0:
-            sequence_sql = connections[self.using].ops.sequence_reset_sql(self.style, models)
-            if sequence_sql:
+        if sequence_sql := connections[self.using].ops.sequence_reset_sql(
+            self.style, models
+        ):
+            if object_count > 0:
                 if verbosity > 1:
                     print("Resetting sequences")
                 for line in sequence_sql:
@@ -216,9 +224,8 @@ class Command(BaseCommand):
         if object_count == 0:
             if verbosity > 1:
                 print("No fixtures found.")
-        else:
-            if verbosity > 0:
-                print("Installed %d object%s from %d fixture%s" % (
-                    object_count, pluralize(object_count),
-                    fixture_count, pluralize(fixture_count)
-                ))
+        elif verbosity > 0:
+            print("Installed %d object%s from %d fixture%s" % (
+                object_count, pluralize(object_count),
+                fixture_count, pluralize(fixture_count)
+            ))

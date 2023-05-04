@@ -60,7 +60,7 @@ def test_with_prompt(settings):
     with patch.dict('sys.modules', getpass=m_getpass):
         call_command('set_fake_passwords', '--prompt')
 
-    assert all([user.check_password("test") for user in User.objects.all()])
+    assert all(user.check_password("test") for user in User.objects.all())
 
 
 @pytest.mark.django_db()

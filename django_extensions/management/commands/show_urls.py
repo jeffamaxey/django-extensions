@@ -60,8 +60,11 @@ class Command(BaseCommand):
             help="Show the presence of given decorator on views"
         )
         parser.add_argument(
-            "--format", "-f", dest="format_style", default="dense",
-            help="Style of the output. Choices: %s" % FMTR.keys()
+            "--format",
+            "-f",
+            dest="format_style",
+            default="dense",
+            help=f"Style of the output. Choices: {FMTR.keys()}",
         )
         parser.add_argument(
             "--urlconf", "-c", dest="urlconf", default="ROOT_URLCONF",
@@ -86,10 +89,7 @@ class Command(BaseCommand):
         format_style = options['format_style']
         if format_style not in FMTR:
             raise CommandError(
-                "Format style '%s' does not exist. Options: %s" % (
-                    format_style,
-                    ", ".join(sorted(FMTR.keys())),
-                )
+                f"""Format style '{format_style}' does not exist. Options: {", ".join(sorted(FMTR.keys()))}"""
             )
         pretty_json = format_style == 'pretty-json'
         if pretty_json:
@@ -100,7 +100,9 @@ class Command(BaseCommand):
 
         views = []
         if not hasattr(settings, urlconf):
-            raise CommandError("Settings module {} does not have the attribute {}.".format(settings, urlconf))
+            raise CommandError(
+                f"Settings module {settings} does not have the attribute {urlconf}."
+            )
 
         try:
             urlconf = __import__(getattr(settings, urlconf), {}, {}, [''])
@@ -108,7 +110,9 @@ class Command(BaseCommand):
             if options['traceback']:
                 import traceback
                 traceback.print_exc()
-            raise CommandError("Error occurred while trying to load %s: %s" % (getattr(settings, urlconf), str(e)))
+            raise CommandError(
+                f"Error occurred while trying to load {getattr(settings, urlconf)}: {str(e)}"
+            )
 
         view_functions = self.extract_views_from_urlpatterns(urlconf.urlpatterns)
         for (func, regex, url_name) in view_functions:
@@ -128,7 +132,7 @@ class Command(BaseCommand):
             if hasattr(func, '__name__'):
                 func_name = func.__name__
             elif hasattr(func, '__class__'):
-                func_name = '%s()' % func.__class__.__name__
+                func_name = f'{func.__class__.__name__}()'
             else:
                 func_name = re.sub(r' at 0x[0-9a-f]+', '', repr(func))
 
@@ -162,28 +166,27 @@ class Command(BaseCommand):
 
             views = [row.split(',', 3) for row in views]
             widths = [len(max(columns, key=len)) for columns in zip(*views)]
-            table_views = []
-
             header = (style.MODULE_NAME('URL'), style.MODULE_NAME('Module'), style.MODULE_NAME('Name'), style.MODULE_NAME('Decorator'))
-            table_views.append(
-                ' | '.join('{0:<{1}}'.format(title, width) for width, title in zip(widths, header))
-            )
-            table_views.append('-+-'.join('-' * width for width in widths))
-
-            for row in views:
-                table_views.append(
-                    ' | '.join('{0:<{1}}'.format(cdata, width) for width, cdata in zip(widths, row))
+            table_views = [
+                ' | '.join(
+                    '{0:<{1}}'.format(title, width)
+                    for width, title in zip(widths, header)
+                ),
+                '-+-'.join('-' * width for width in widths),
+            ]
+            table_views.extend(
+                ' | '.join(
+                    '{0:<{1}}'.format(cdata, width)
+                    for width, cdata in zip(widths, row)
                 )
-
+                for row in views
+            )
             # Replace original views so we can return the same object
             views = table_views
 
         elif format_style == 'json':
-            if pretty_json:
-                return json.dumps(views, indent=4)
-            return json.dumps(views)
-
-        return "\n".join([v for v in views]) + "\n"
+            return json.dumps(views, indent=4) if pretty_json else json.dumps(views)
+        return "\n".join(list(views)) + "\n"
 
     def extract_views_from_urlpatterns(self, urlpatterns, base='', namespace=None):
         """
@@ -195,12 +198,7 @@ class Command(BaseCommand):
         for p in urlpatterns:
             if isinstance(p, (URLPattern, RegexURLPattern)):
                 try:
-                    if not p.name:
-                        name = p.name
-                    elif namespace:
-                        name = '{0}:{1}'.format(namespace, p.name)
-                    else:
-                        name = p.name
+                    name = '{0}:{1}'.format(namespace, p.name) if p.name and namespace else p.name
                     pattern = describe_pattern(p)
                     views.append((p.callback, base + pattern, name))
                 except ViewDoesNotExist:
@@ -233,5 +231,5 @@ class Command(BaseCommand):
                     continue
                 views.extend(self.extract_views_from_urlpatterns(patterns, base + describe_pattern(p), namespace=namespace))
             else:
-                raise TypeError("%s does not appear to be a urlpattern object" % p)
+                raise TypeError(f"{p} does not appear to be a urlpattern object")
         return views

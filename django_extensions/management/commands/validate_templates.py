@@ -43,10 +43,10 @@ class Command(BaseCommand):
 
     def ignore_filename(self, filename):
         filename = os.path.basename(filename)
-        for ignore_pattern in self.ignores:
-            if fnmatch.fnmatch(filename, ignore_pattern):
-                return True
-        return False
+        return any(
+            fnmatch.fnmatch(filename, ignore_pattern)
+            for ignore_pattern in self.ignores
+        )
 
     @signalcommand
     def handle(self, *args, **options):
@@ -87,10 +87,12 @@ class Command(BaseCommand):
                         get_template(filepath)
                     except Exception as e:
                         errors += 1
-                        self.stdout.write("%s: %s" % (filepath, style.ERROR("%s %s" % (e.__class__.__name__, str(e)))))
+                        self.stdout.write(
+                            f'{filepath}: {style.ERROR(f"{e.__class__.__name__} {str(e)}")}'
+                        )
                     if errors and options['break']:
                         raise CommandError("Errors found")
 
         if errors:
-            raise CommandError("%s errors found" % errors)
-        self.stdout.write("%s errors found" % errors)
+            raise CommandError(f"{errors} errors found")
+        self.stdout.write(f"{errors} errors found")

@@ -11,11 +11,11 @@ from unittest.mock import MagicMock
 class TemplateTagsTests(TestCase):
     def test_widont(self):
         self.assertEqual(widont('Test Value'), 'Test&nbsp;Value')
-        self.assertEqual(widont(str('Test Value')), str('Test&nbsp;Value'))
+        self.assertEqual(widont('Test Value'), 'Test&nbsp;Value')
 
     def test_widont_html(self):
         self.assertEqual(widont_html('Test Value'), 'Test&nbsp;Value')
-        self.assertEqual(widont_html(str('Test Value')), str('Test&nbsp;Value'))
+        self.assertEqual(widont_html('Test Value'), 'Test&nbsp;Value')
 
 
 class DebuggerTagsTests(TestCase):

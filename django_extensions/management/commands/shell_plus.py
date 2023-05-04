@@ -60,7 +60,7 @@ class Command(BaseCommand):
             if runner.runner_help:
                 help = runner.runner_help
             else:
-                help = 'Tells Django to use %s.' % runner.runner_name
+                help = f'Tells Django to use {runner.runner_name}.'
 
             group.add_argument(
                 *runner.runner_flags, action='store_const', dest='runner', const=runner, help=help)
@@ -501,9 +501,13 @@ for k, m in shells.import_objects({}, no_style()).items():
         for connection in connections.all():
             alias = connection.alias
             mro = inspect.getmro(connection.__class__)
-            if any(klass.__module__.startswith(supported_backends) for klass in mro):
-                if 'OPTIONS' not in dbs[alias] or opt_name not in dbs[alias]['OPTIONS']:
-                    dbs[alias].setdefault('OPTIONS', {}).update({opt_name: default_app_name})
+            if any(
+                klass.__module__.startswith(supported_backends) for klass in mro
+            ) and (
+                'OPTIONS' not in dbs[alias]
+                or opt_name not in dbs[alias]['OPTIONS']
+            ):
+                dbs[alias].setdefault('OPTIONS', {}).update({opt_name: default_app_name})
 
     @signalcommand
     def handle(self, *args, **options):
@@ -526,7 +530,7 @@ for k, m in shells.import_objects({}, no_style()).items():
             self.set_application_name(options)
 
             if not get_runner and SETTINGS_SHELL_PLUS:
-                get_runner = get_runner_by_flag('--%s' % SETTINGS_SHELL_PLUS)
+                get_runner = get_runner_by_flag(f'--{SETTINGS_SHELL_PLUS}')
                 if not get_runner:
                     runner = None
                     runner_name = SETTINGS_SHELL_PLUS
@@ -538,12 +542,12 @@ for k, m in shells.import_objects({}, no_style()).items():
                 def try_runner(get_runner):
                     runner_name = get_runner.runner_name
                     if verbosity > 2:
-                        print(self.style.NOTICE("Trying: %s" % runner_name))
+                        print(self.style.NOTICE(f"Trying: {runner_name}"))
 
                     runner = get_runner(options)
                     if callable(runner):
                         if verbosity > 1:
-                            print(self.style.NOTICE("Using: %s" % runner_name))
+                            print(self.style.NOTICE(f"Using: {runner_name}"))
                         return runner
                     return None
 
@@ -552,7 +556,7 @@ for k, m in shells.import_objects({}, no_style()).items():
                 # try the runners that are least unexpected (normal shell runners)
                 preferred_runners = ['ptipython', 'ptpython', 'bpython', 'ipython', 'plain']
                 for flag_suffix in preferred_runners:
-                    get_runner = get_runner_by_flag('--%s' % flag_suffix)
+                    get_runner = get_runner_by_flag(f'--{flag_suffix}')
                     tried_runners.add(get_runner)
                     runner = try_runner(get_runner)
                     if runner:
@@ -573,7 +577,7 @@ for k, m in shells.import_objects({}, no_style()).items():
                     print(runner)
                 if not runner_name:
                     raise CommandError("No shell runner could be found.")
-                raise CommandError("Could not load shell runner: '%s'." % runner_name)
+                raise CommandError(f"Could not load shell runner: '{runner_name}'.")
 
             if self.tests_mode:
                 return 130

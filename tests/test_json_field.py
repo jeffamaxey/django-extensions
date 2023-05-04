@@ -116,7 +116,7 @@ class JsonFieldTest(TestCase):
         )
 
         self.assertEqual(
-            str('[{"a": "a"}]'),
+            '[{"a": "a"}]',
             j_field.get_db_prep_save(value='[{"a": "a"}]', connection=None),
         )
 

@@ -74,7 +74,8 @@ class JSONField(StringField):
 
     def get_db_prep_save(self, value):
         """ Convert our JSON object to a string before we save """
-        if not value:
-            return super().get_db_prep_save("")
-        else:
-            return super().get_db_prep_save(dumps(value))
+        return (
+            super().get_db_prep_save(dumps(value))
+            if value
+            else super().get_db_prep_save("")
+        )

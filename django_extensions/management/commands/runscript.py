@@ -23,7 +23,7 @@ class DirPolicyChoices:
 
 def check_is_directory(value):
     if value is None or not os.path.isdir(value):
-        raise ArgumentTypeError("%s is not a directory!" % value)
+        raise ArgumentTypeError(f"{value} is not a directory!")
     return value
 
 
@@ -108,17 +108,14 @@ class Command(EmailNotificationCommand):
         show_traceback = options['traceback']
         no_traceback = options['no_traceback']
         continue_on_error = options['continue_on_error']
-        if no_traceback:
-            show_traceback = False
-        else:
-            show_traceback = True
+        show_traceback = not no_traceback
         silent = options['silent']
         if silent:
             verbosity = 0
             continue_on_error = True
         email_notifications = options['email_notifications']
 
-        if len(subdirs) < 1:
+        if not subdirs:
             print(NOTICE("No subdirs to run left."))
             return
 
@@ -162,12 +159,14 @@ class Command(EmailNotificationCommand):
                 if isinstance(exit_code, bool):
                     # convert boolean True to exit-code 0 and False to exit-code 1
                     exit_code = 1 if exit_code else 0
-                if isinstance(exit_code, int):
-                    if exit_code != 0:
-                        try:
-                            raise CommandError("'%s' failed with exit code %s" % (mod.__name__, exit_code), returncode=exit_code)
-                        except TypeError:
-                            raise CommandError("'%s' failed with exit code %s" % (mod.__name__, exit_code))
+                if isinstance(exit_code, int) and exit_code != 0:
+                    try:
+                        raise CommandError(
+                            f"'{mod.__name__}' failed with exit code {exit_code}",
+                            returncode=exit_code,
+                        )
+                    except TypeError:
+                        raise CommandError(f"'{mod.__name__}' failed with exit code {exit_code}")
                 if email_notifications:
                     self.send_email_notification(notification_id=mod.__name__)
             except Exception as e:
@@ -177,7 +176,7 @@ class Command(EmailNotificationCommand):
                 if silent:
                     return
                 if verbosity > 0:
-                    print(ERROR("Exception while running run() in '%s'" % mod.__name__))
+                    print(ERROR(f"Exception while running run() in '{mod.__name__}'"))
                 if continue_on_error:
                     if show_traceback:
                         traceback.print_exc()
@@ -191,9 +190,9 @@ class Command(EmailNotificationCommand):
                 raise
 
         def my_import(parent_package, module_name):
-            full_module_path = "%s.%s" % (parent_package, module_name)
+            full_module_path = f"{parent_package}.{module_name}"
             if verbosity > 1:
-                print(NOTICE("Check for %s" % full_module_path))
+                print(NOTICE(f"Check for {full_module_path}"))
             # Try importing the parent package first
             try:
                 importlib.import_module(parent_package)
@@ -219,17 +218,21 @@ class Command(EmailNotificationCommand):
                 if show_traceback:
                     traceback.print_exc()
                 if verbosity > 0:
-                    print(ERROR("Cannot import module '%s': %s." % (full_module_path, e)))
+                    print(ERROR(f"Cannot import module '{full_module_path}': {e}."))
 
                 return False
 
             if hasattr(t, "run"):
                 if verbosity > 1:
-                    print(NOTICE2("Found script '%s' ..." % full_module_path))
+                    print(NOTICE2(f"Found script '{full_module_path}' ..."))
                 return t
             else:
                 if verbosity > 1:
-                    print(ERROR2("Found script '%s' but no run() function found." % full_module_path))
+                    print(
+                        ERROR2(
+                            f"Found script '{full_module_path}' but no run() function found."
+                        )
+                    )
 
         def find_modules_for_script(script):
             """ Find script module which contains 'run' attribute """
@@ -237,7 +240,7 @@ class Command(EmailNotificationCommand):
             # first look in apps
             for app in apps.get_app_configs():
                 for subdir in subdirs:
-                    mod = my_import("%s.%s" % (app.name, subdir), script)
+                    mod = my_import(f"{app.name}.{subdir}", script)
                     if mod:
                         modules.append(mod)
             # try direct import
@@ -255,11 +258,7 @@ class Command(EmailNotificationCommand):
 
             return modules
 
-        if options['script_args']:
-            script_args = options['script_args']
-        else:
-            script_args = []
-
+        script_args = options['script_args'] if options['script_args'] else []
         # first pass to check if all scripts can be found
         script_to_run = []
         for script in scripts:
@@ -267,7 +266,7 @@ class Command(EmailNotificationCommand):
             if not script_modules:
                 self.last_exit_code = 1
                 if verbosity > 0 and not silent:
-                    print(ERROR("No (valid) module for script '%s' found" % script))
+                    print(ERROR(f"No (valid) module for script '{script}' found"))
                 continue
             script_to_run.extend(script_modules)
 
@@ -279,7 +278,7 @@ class Command(EmailNotificationCommand):
 
         for script_mod in script_to_run:
             if verbosity > 1:
-                print(NOTICE2("Running script '%s' ..." % script_mod.__name__))
+                print(NOTICE2(f"Running script '{script_mod.__name__}' ..."))
             run_script(script_mod, *script_args)
 
         if self.last_exit_code != 0:

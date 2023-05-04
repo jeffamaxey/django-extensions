@@ -94,7 +94,7 @@ def import_items(import_directives, style, quiet_load=False):
                     continue
 
                 if not quiet_load:
-                    print(style.SQL_COLTYPE("%s" % directive))
+                    print(style.SQL_COLTYPE(f"{directive}"))
 
                 for body in node.body:
                     if isinstance(body, ast.Import):
@@ -122,7 +122,7 @@ def import_items(import_directives, style, quiet_load=False):
                     imported_object = __import__(directive)
                     imported_objects[directive.split('.')[0]] = imported_object
                     if not quiet_load:
-                        print(style.SQL_COLTYPE("import %s" % directive))
+                        print(style.SQL_COLTYPE(f"import {directive}"))
                     continue
                 elif isinstance(directive, (list, tuple)) and len(directive) == 2:
                     if not isinstance(directive[0], str):
@@ -143,7 +143,11 @@ def import_items(import_directives, style, quiet_load=False):
                             else:
                                 imported_names.append(name)
                         if not quiet_load:
-                            print(style.SQL_COLTYPE("from %s import %s" % (directive[0], ', '.join(imported_names))))
+                            print(
+                                style.SQL_COLTYPE(
+                                    f"from {directive[0]} import {', '.join(imported_names)}"
+                                )
+                            )
                     elif isinstance(directive[1], str):
                         # If it is a tuple, but the second item isn't a list, so we have something like ('module.submodule', 'classname1')
                         # Check for the special '*' to import all
@@ -152,18 +156,16 @@ def import_items(import_directives, style, quiet_load=False):
                             for k in dir(imported_object):
                                 imported_objects[k] = getattr(imported_object, k)
                             if not quiet_load:
-                                print(style.SQL_COLTYPE("from %s import *" % directive[0]))
+                                print(style.SQL_COLTYPE(f"from {directive[0]} import *"))
                         else:
                             imported_object = getattr(__import__(directive[0], {}, {}, [directive[1]]), directive[1])
                             imported_objects[directive[1]] = imported_object
                             if not quiet_load:
-                                print(style.SQL_COLTYPE("from %s import %s" % (directive[0], directive[1])))
-                    else:
-                        if not quiet_load:
-                            print(style.ERROR("Unable to import %r from %r: names must be of type string" % (directive[1], directive[0])))
-                else:
-                    if not quiet_load:
-                        print(style.ERROR("Unable to import %r: names must be of type string" % directive))
+                                print(style.SQL_COLTYPE(f"from {directive[0]} import {directive[1]}"))
+                    elif not quiet_load:
+                        print(style.ERROR("Unable to import %r from %r: names must be of type string" % (directive[1], directive[0])))
+                elif not quiet_load:
+                    print(style.ERROR("Unable to import %r: names must be of type string" % directive))
         except ImportError:
             if not quiet_load:
                 print(style.ERROR("Unable to import %r" % directive))
@@ -192,7 +194,7 @@ def import_objects(options, style):
     imported_objects = {}
     load_models = {}
 
-    def get_dict_from_names_to_possible_models():  # type: () -> Dict[str, List[str]]
+    def get_dict_from_names_to_possible_models():    # type: () -> Dict[str, List[str]]
         """
         Collect dictionary from names to possible models. Model is represented as his full path.
         Name of model can be alias if SHELL_PLUS_MODEL_ALIASES or SHELL_PLUS_APP_PREFIXES is specified for this model.
@@ -207,19 +209,15 @@ def import_objects(options, style):
             prefix = app_prefixes.get(app_name)
 
             for model_name in sorted(models):
-                if "%s.%s" % (app_name, model_name) in dont_load:
+                if f"{app_name}.{model_name}" in dont_load:
                     continue
 
                 alias = app_aliases.get(model_name)
 
                 if not alias:
-                    if prefix:
-                        alias = "%s_%s" % (prefix, model_name)
-                    else:
-                        alias = model_name
-
+                    alias = f"{prefix}_{model_name}" if prefix else model_name
                 models_to_import.setdefault(alias, [])
-                models_to_import[alias].append("%s.%s" % (app_mod, model_name))
+                models_to_import[alias].append(f"{app_mod}.{model_name}")
         return models_to_import
 
     def import_subclasses():
@@ -238,7 +236,7 @@ def import_objects(options, style):
         modules_to_models = CollisionResolvingRunner().run_collision_resolver(get_dict_from_names_to_possible_models())
         perform_automatic_imports(modules_to_models)
 
-    def perform_automatic_imports(modules_to_classes):  # type: (Dict[str, List[Tuple[str, str]]]) -> ()
+    def perform_automatic_imports(modules_to_classes):    # type: (Dict[str, List[Tuple[str, str]]]) -> ()
         """
         Import elements from given dictionary.
         :param modules_to_classes: dictionary from module name to tuple.
@@ -249,19 +247,26 @@ def import_objects(options, style):
             model_labels = []
             for (model_name, alias) in sorted(models):
                 try:
-                    imported_objects[alias] = import_string("%s.%s" % (full_module_path, model_name))
+                    imported_objects[alias] = import_string(f"{full_module_path}.{model_name}")
                     if model_name == alias:
                         model_labels.append(model_name)
                     else:
-                        model_labels.append("%s (as %s)" % (model_name, alias))
+                        model_labels.append(f"{model_name} (as {alias})")
                 except ImportError as e:
                     if options.get("traceback"):
                         traceback.print_exc()
                     if not options.get('quiet_load'):
-                        print(style.ERROR(
-                            "Failed to import '%s' from '%s' reason: %s" % (model_name, full_module_path, str(e))))
+                        print(
+                            style.ERROR(
+                                f"Failed to import '{model_name}' from '{full_module_path}' reason: {str(e)}"
+                            )
+                        )
             if not options.get('quiet_load'):
-                print(style.SQL_COLTYPE("from %s import %s" % (full_module_path, ", ".join(model_labels))))
+                print(
+                    style.SQL_COLTYPE(
+                        f'from {full_module_path} import {", ".join(model_labels)}'
+                    )
+                )
 
     def get_apps_and_models():
         for app in apps.get_app_configs():
@@ -287,7 +292,7 @@ def import_objects(options, style):
         for name, mod in _document_registry.items():
             name = name.split('.')[-1]
             app_name = get_app_name(mod.__module__)
-            if app_name in dont_load or ("%s.%s" % (app_name, name)) in dont_load:
+            if app_name in dont_load or f"{app_name}.{name}" in dont_load:
                 continue
 
             load_models.setdefault(mod.__module__, [])
@@ -303,7 +308,7 @@ def import_objects(options, style):
                 continue
 
             for mod in app_models:
-                if "%s.%s" % (app_name, mod.__name__) in dont_load:
+                if f"{app_name}.{mod.__name__}" in dont_load:
                     continue
 
                 if mod.__module__:

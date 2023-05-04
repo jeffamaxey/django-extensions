@@ -73,17 +73,15 @@ class Command(BaseCommand):
         if no_staff:
             users = users.exclude(is_staff=True)
         if exclude_groups:
-            groups = Group.objects.filter(name__in=exclude_groups.split(","))
-            if groups:
+            if groups := Group.objects.filter(name__in=exclude_groups.split(",")):
                 users = users.exclude(groups__in=groups)
             else:
-                raise CommandError("No groups matches filter: %s" % exclude_groups)
+                raise CommandError(f"No groups matches filter: {exclude_groups}")
         if include_groups:
-            groups = Group.objects.filter(name__in=include_groups.split(","))
-            if groups:
+            if groups := Group.objects.filter(name__in=include_groups.split(",")):
                 users = users.filter(groups__in=groups)
             else:
-                raise CommandError("No groups matches filter: %s" % include_groups)
+                raise CommandError(f"No groups matches filter: {include_groups}")
         if exclude_regexp:
             users = users.exclude(username__regex=exclude_regexp)
         if include_regexp:

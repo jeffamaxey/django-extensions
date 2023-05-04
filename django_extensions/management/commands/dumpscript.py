@@ -71,16 +71,11 @@ def orm_item_locator(orm_obj):
         if v is not None:
             if isinstance(v, datetime.datetime):
                 v = timezone.make_aware(v)
-                clean_dict[key] = StrToCodeChanger('dateutil.parser.parse("%s")' % v.isoformat())
+                clean_dict[key] = StrToCodeChanger(f'dateutil.parser.parse("{v.isoformat()}")')
             elif not isinstance(v, (str, int, float)):
-                clean_dict[key] = str("%s" % v)
+                clean_dict[key] = str(f"{v}")
 
-    output = """ importer.locate_object(%s, "%s", %s, "%s", %s, %s ) """ % (
-        original_class, original_pk_name,
-        the_class, pk_name, pk_value, clean_dict
-    )
-
-    return output
+    return f""" importer.locate_object({original_class}, "{original_pk_name}", {the_class}, "{pk_name}", {pk_value}, {clean_dict} ) """
 
 
 class Command(BaseCommand):
@@ -173,16 +168,15 @@ class Code:
 
     def __str__(self):
         """ Return a string representation of this script. """
-        if self.imports:
-            self.stderr.write(repr(self.import_lines))
-            return flatten_blocks([""] + self.import_lines + [""] + self.lines, num_indents=self.indent)
-        else:
+        if not self.imports:
             return flatten_blocks(self.lines, num_indents=self.indent)
+        self.stderr.write(repr(self.import_lines))
+        return flatten_blocks([""] + self.import_lines + [""] + self.lines, num_indents=self.indent)
 
     def get_import_lines(self):
         """ Take the stored imports and converts them to lines """
         if self.imports:
-            return ["from %s import %s" % (value, key) for key, value in self.imports.items()]
+            return [f"from {value} import {key}" for key, value in self.imports.items()]
         else:
             return []
     import_lines = property(get_import_lines)
@@ -247,7 +241,7 @@ class InstanceCode(Code):
         if context is None:
             context = {}
         self.context = context
-        self.variable_name = "%s_%s" % (self.instance._meta.db_table, id)
+        self.variable_name = f"{self.instance._meta.db_table}_{id}"
         self.skip_me = None
         self.instantiated = False
 
@@ -316,13 +310,13 @@ class InstanceCode(Code):
         using = router.db_for_write(cls, instance=self.instance)
         collector = Collector(using=using)
         collector.collect([self.instance], collect_related=False)
-        sub_objects = sum([list(i) for i in collector.data.values()], [])
+        sub_objects = sum((list(i) for i in collector.data.values()), [])
         sub_objects_parents = [so._meta.parents for so in sub_objects]
         if [self.model in p for p in sub_objects_parents].count(True) == 1:
             # since this instance isn't explicitly created, it's variable name
             # can't be referenced in the script, so record None in context dict
             pk_name = self.instance._meta.pk.name
-            key = '%s_%s' % (self.model.__name__, getattr(self.instance, pk_name))
+            key = f'{self.model.__name__}_{getattr(self.instance, pk_name)}'
             self.context[key] = None
             self.skip_me = True
         else:
@@ -336,12 +330,12 @@ class InstanceCode(Code):
         code_lines = []
 
         if not self.instantiated:
-            code_lines.append("%s = %s()" % (self.variable_name, self.model.__name__))
+            code_lines.append(f"{self.variable_name} = {self.model.__name__}()")
             self.instantiated = True
 
             # Store our variable name for future foreign key references
             pk_name = self.instance._meta.pk.name
-            key = '%s_%s' % (self.model.__name__, getattr(self.instance, pk_name))
+            key = f'{self.model.__name__}_{getattr(self.instance, pk_name)}'
             self.context[key] = self.variable_name
 
         return code_lines
@@ -357,7 +351,7 @@ class InstanceCode(Code):
             try:
                 # Find the value, add the line, remove from waiting list and move on
                 value = get_attribute_value(self.instance, field, self.context, force=force, skip_autofield=skip_autofield)
-                code_lines.append('%s.%s = %s' % (self.variable_name, field.name, value))
+                code_lines.append(f'{self.variable_name}.{field.name} = {value}')
                 self.waiting_list.remove(field)
             except SkipValue:
                 # Remove from the waiting list and move on
@@ -378,15 +372,15 @@ class InstanceCode(Code):
             for rel_item in list(rel_items):
                 try:
                     pk_name = rel_item._meta.pk.name
-                    key = '%s_%s' % (rel_item.__class__.__name__, getattr(rel_item, pk_name))
-                    value = "%s" % self.context[key]
-                    lines.append('%s.%s.add(%s)' % (self.variable_name, field.name, value))
+                    key = f'{rel_item.__class__.__name__}_{getattr(rel_item, pk_name)}'
+                    value = f"{self.context[key]}"
+                    lines.append(f'{self.variable_name}.{field.name}.add({value})')
                     self.many_to_many_waiting_list[field].remove(rel_item)
                 except KeyError:
                     if force:
                         item_locator = orm_item_locator(rel_item)
                         self.context["__extra_imports"][rel_item._meta.object_name] = rel_item.__module__
-                        lines.append('%s.%s.add( %s )' % (self.variable_name, field.name, item_locator))
+                        lines.append(f'{self.variable_name}.{field.name}.add( {item_locator} )')
                         self.many_to_many_waiting_list[field].remove(rel_item)
 
         if lines:
@@ -468,24 +462,21 @@ class Script(Code):
         for model_class in self._queue_models(self.models, context=self.context):
             msg = 'Processing model: %s.%s\n' % (model_class.model.__module__, model_class.model.__name__)
             self.stderr.write(msg)
-            code.append("    # " + msg)
-            code.append(model_class.import_lines)
-            code.append("")
-            code.append(model_class.lines)
-
+            code.extend((f"    # {msg}", model_class.import_lines, "", model_class.lines))
         # Process left over foreign keys from cyclic models
         for model in self.models:
             msg = 'Re-processing model: %s.%s\n' % (model.model.__module__, model.model.__name__)
             self.stderr.write(msg)
-            code.append("    # " + msg)
-            for instance in model.instances:
-                if instance.waiting_list or instance.many_to_many_waiting_list:
-                    code.append(instance.get_lines(force=True))
-
+            code.append(f"    # {msg}")
+            code.extend(
+                instance.get_lines(force=True)
+                for instance in model.instances
+                if instance.waiting_list or instance.many_to_many_waiting_list
+            )
         code.insert(1, "    # Initial Imports")
         code.insert(2, "")
         for key, value in self.context["__extra_imports"].items():
-            code.insert(2, "    from %s import %s" % (value, key))
+            code.insert(2, f"    from {value} import {key}")
 
         return code
 
@@ -635,14 +626,14 @@ def flatten_blocks(lines, num_indents=-1):
     Take a list (block) or string (statement) and flattens it into a string
     with indentation.
     """
-    # The standard indent is four spaces
-    INDENTATION = " " * 4
-
     if not lines:
         return ""
 
     # If this is a string, add the indentation and finish here
     if isinstance(lines, str):
+        # The standard indent is four spaces
+        INDENTATION = " " * 4
+
         return INDENTATION * num_indents + lines
 
     # If this is not a string, join the lines and recurse
@@ -661,15 +652,12 @@ def get_attribute_value(item, field, context, force=False, skip_autofield=True):
     if skip_autofield and isinstance(field, AutoField):
         raise SkipValue()
 
-    # Some databases (eg MySQL) might store boolean values as 0/1, this needs to be cast as a bool
     elif isinstance(field, BooleanField) and value is not None:
         return repr(bool(value))
 
-    # Post file-storage-refactor, repr() on File/ImageFields no longer returns the path
     elif isinstance(field, FileField):
         return repr(force_str(value))
 
-    # ForeignKey fields, link directly using our stored python variable name
     elif isinstance(field, ForeignKey) and value is not None:
 
         # Special case for contenttype foreign keys: no need to output any
@@ -677,11 +665,11 @@ def get_attribute_value(item, field, context, force=False, skip_autofield=True):
         # automatically.
         # NB: Not sure if "is" will always work
         if field.remote_field.model is ContentType:
-            return 'ContentType.objects.get(app_label="%s", model="%s")' % (value.app_label, value.model)
+            return f'ContentType.objects.get(app_label="{value.app_label}", model="{value.model}")'
 
         # Generate an identifier (key) for this foreign object
         pk_name = value._meta.pk.name
-        key = '%s_%s' % (value.__class__.__name__, getattr(value, pk_name))
+        key = f'{value.__class__.__name__}_{getattr(value, pk_name)}'
 
         if key in context:
             variable_name = context[key]
@@ -690,18 +678,16 @@ def get_attribute_value(item, field, context, force=False, skip_autofield=True):
             if variable_name is None:
                 raise SkipValue()
             # Return the variable name listed in the context
-            return "%s" % variable_name
+            return f"{variable_name}"
         elif value.__class__ not in context["__avaliable_models"] or force:
             context["__extra_imports"][value._meta.object_name] = value.__module__
-            item_locator = orm_item_locator(value)
-            return item_locator
+            return orm_item_locator(value)
         else:
             raise DoLater('(FK) %s.%s\n' % (item.__class__.__name__, field.name))
 
     elif isinstance(field, (DateField, DateTimeField)) and value is not None:
         return "dateutil.parser.parse(\"%s\")" % value.isoformat()
 
-    # A normal field (e.g. a python built-in)
     else:
         return repr(value)
 
@@ -724,9 +710,10 @@ def check_dependencies(model, model_queue, avaliable_models):
     for field in model._meta.fields:
         if not field.remote_field:
             continue
-        if field.remote_field.model.__name__ not in allowed_links:
-            if field.remote_field.model not in avaliable_models:
-                continue
+        if (
+            field.remote_field.model.__name__ not in allowed_links
+            and field.remote_field.model in avaliable_models
+        ):
             return False
 
     for field in model._meta.many_to_many:

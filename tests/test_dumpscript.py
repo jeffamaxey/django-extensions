@@ -81,12 +81,12 @@ class DumpScriptTests(TestCase):
         dumpscript_path = './django_extensions/scripts'
 
         os.mkdir(dumpscript_path)
-        open(dumpscript_path + '/__init__.py', 'w').close()  # for python 2.7
+        open(f'{dumpscript_path}/__init__.py', 'w').close()
 
         # This script will have a dateutil codes.
         # e.g. importer.locate_object(...,
         # 'date_joined': dateutil.parser.parse("2019-05-20T03:32:27.144586+09:00")
-        with open(dumpscript_path + '/test.py', 'wt') as test:
+        with open(f'{dumpscript_path}/test.py', 'wt') as test:
             call_command('dumpscript', 'django_extensions', stdout=test)
 
         # Check dumpscript without exception

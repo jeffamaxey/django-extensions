@@ -108,8 +108,7 @@ class EmailNotificationCommand(BaseCommand):
         command_name = self.__module__.split('.')[-1]
 
         body = email_settings.get(
-            'body',
-            "Reporting execution of command: '%s'" % command_name
+            'body', f"Reporting execution of command: '{command_name}'"
         )
 
         # Include traceback

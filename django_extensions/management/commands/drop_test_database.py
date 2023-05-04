@@ -41,8 +41,9 @@ class Command(BaseCommand):
             help='Use this router-database other then defined in settings.py'
         )
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
 
     @signalcommand
@@ -55,7 +56,7 @@ class Command(BaseCommand):
 
         dbinfo = settings.DATABASES.get(database)
         if dbinfo is None:
-            raise CommandError("Unknown database %s" % database)
+            raise CommandError(f"Unknown database {database}")
 
         engine = dbinfo.get('ENGINE')
 
@@ -117,7 +118,7 @@ Type 'yes' to continue, or 'no' to cancel: """.format(db_name=database_name))
             # specified a test database name, which forces files to be written
             # to disk.
 
-            logging.info("Unlinking %s databases" % engine)
+            logging.info(f"Unlinking {engine} databases")
 
             def format_filename(name, number):
                 filename, ext = os.path.splitext(name)
@@ -133,7 +134,7 @@ Type 'yes' to continue, or 'no' to cancel: """.format(db_name=database_name))
                 for db_name in get_database_names(format_filename):
                     if not os.path.isfile(db_name):
                         break
-                    logging.info('Unlinking database named "%s"' % db_name)
+                    logging.info(f'Unlinking database named "{db_name}"')
                     os.unlink(db_name)
             except OSError:
                 return
@@ -156,14 +157,12 @@ Type 'yes' to continue, or 'no' to cancel: """.format(db_name=database_name))
             cursor = connection.cursor()
 
             for db_name in get_database_names('{}_{}'.format):
-                exists_query = \
-                    "SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='%s';" \
-                    % db_name
+                exists_query = f"SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME='{db_name}';"
                 row_count = cursor.execute(exists_query)
                 if row_count < 1:
                     break
-                drop_query = 'DROP DATABASE IF EXISTS `%s`' % db_name
-                logging.info('Executing: "' + drop_query + '"')
+                drop_query = f'DROP DATABASE IF EXISTS `{db_name}`'
+                logging.info(f'Executing: "{drop_query}"')
                 cursor.execute(drop_query)
 
         elif engine in POSTGRESQL_ENGINES:
@@ -184,8 +183,7 @@ Type 'yes' to continue, or 'no' to cancel: """.format(db_name=database_name))
             cursor = connection.cursor()
 
             for db_name in get_database_names('{}_{}'.format):
-                exists_query = "SELECT datname FROM pg_catalog.pg_database WHERE datname='%s';" \
-                    % db_name
+                exists_query = f"SELECT datname FROM pg_catalog.pg_database WHERE datname='{db_name}';"
                 try:
                     cursor.execute(exists_query)
                     # NOTE: Unlike MySQLdb, the psycopg2 cursor does not return the row count
@@ -193,13 +191,13 @@ Type 'yes' to continue, or 'no' to cancel: """.format(db_name=database_name))
                     if cursor.rowcount < 1:
                         break
                     drop_query = "DROP DATABASE IF EXISTS \"%s\";" % db_name
-                    logging.info('Executing: "' + drop_query + '"')
+                    logging.info(f'Executing: "{drop_query}"')
                     cursor.execute(drop_query)
                 except Database.ProgrammingError as e:
-                    logging.exception("Error: %s" % str(e))
+                    logging.exception(f"Error: {str(e)}")
                     return
         else:
-            raise CommandError("Unknown database engine %s" % engine)
+            raise CommandError(f"Unknown database engine {engine}")
 
         if verbosity >= 2 or options['interactive']:
             print("Reset successful.")

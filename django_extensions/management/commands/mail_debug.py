@@ -23,7 +23,7 @@ class ExtensionDebuggingServer(SMTPServer):
         for line in lines:
             # headers first
             if inheaders and not line:
-                logger.info('X-Peer: %s' % peer[0])
+                logger.info(f'X-Peer: {peer[0]}')
                 inheaders = 0
             logger.info(line)
         logger.info('------------ END MESSAGE ------------')
@@ -54,7 +54,7 @@ class Command(BaseCommand):
             if options['use_settings']:
                 from django.conf import settings
                 addr = getattr(settings, 'EMAIL_HOST', '')
-                port = str(getattr(settings, 'EMAIL_PORT', '1025'))
+                port = getattr(settings, 'EMAIL_PORT', '1025')
             else:
                 addr = ''
                 port = '1025'
@@ -75,8 +75,8 @@ class Command(BaseCommand):
         setup_logger(logger, stream=self.stdout, filename=options['output_file'])
 
         def inner_run():
-            quit_command = (sys.platform == 'win32') and 'CTRL-BREAK' or 'CONTROL-C'
-            print("Now accepting mail at %s:%s -- use %s to quit" % (addr, port, quit_command))
+            quit_command = 'CTRL-BREAK' if sys.platform == 'win32' else 'CONTROL-C'
+            print(f"Now accepting mail at {addr}:{port} -- use {quit_command} to quit")
             ExtensionDebuggingServer((addr, port), None, decode_data=True)
             asyncore.loop()
 

@@ -32,7 +32,10 @@ class SqlDiffTests(TestCase):
         )
         instance.load()
         instance.find_differences()
-        checked_models = {"%s.%s" % (app_label, model_name) for app_label, model_name, _ in instance.differences}
+        checked_models = {
+            f"{app_label}.{model_name}"
+            for app_label, model_name, _ in instance.differences
+        }
         self.assertEqual(should_include_proxy_models, "testapp.PostWithTitleOrdering" in checked_models)
 
     @pytest.mark.skipif(settings.DATABASES['default']['ENGINE'] != 'django.db.backends.sqlite3', reason="Test can only run on sqlite3")

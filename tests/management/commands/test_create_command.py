@@ -17,7 +17,9 @@ class CreateCommandTests(TestCase):
     """Tests for create_command command."""
 
     def setUp(self):  # noqa
-        self.management_command_path = os.path.join(settings.BASE_DIR, 'tests/{}/management'.format(TEST_APP))
+        self.management_command_path = os.path.join(
+            settings.BASE_DIR, f'tests/{TEST_APP}/management'
+        )
         self.command_template_path = os.path.join(settings.BASE_DIR, 'django_extensions/conf/command_template')
 
         self.files = [
@@ -73,7 +75,7 @@ class CreateCommandTests(TestCase):
 
         for f in self.files:
             filepath = os.path.join(self.management_command_path, f)
-            self.assertIn('{} already exists'.format(filepath), m_stdout.getvalue())
+            self.assertIn(f'{filepath} already exists', m_stdout.getvalue())
             self.assertTrue(os.path.isfile(filepath))
             self.assertEqual(os.path.getsize(filepath), 0)
 
@@ -87,5 +89,7 @@ class CreateCommandTests(TestCase):
         call_command('create_command', TEST_APP)
         for f in self.files:
             filepath = os.path.join(self.management_command_path, f)
-            self.assertIn("Notice: Couldn't set permission bits on {}. You're probably using an uncommon filesystem setup. No problem.\n".format(filepath),  # noqa
-                          m_stderr.getvalue())
+            self.assertIn(
+                f"Notice: Couldn't set permission bits on {filepath}. You're probably using an uncommon filesystem setup. No problem.\n",
+                m_stderr.getvalue(),
+            )

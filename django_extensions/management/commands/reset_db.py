@@ -54,8 +54,9 @@ class Command(BaseCommand):
             help='Use this router-database other than defined in settings.py'
         )
         parser.add_argument(
-            '--database', default=DEFAULT_DB_ALIAS,
-            help='Nominates a database to run command for. Defaults to the "%s" database.' % DEFAULT_DB_ALIAS,
+            '--database',
+            default=DEFAULT_DB_ALIAS,
+            help=f'Nominates a database to run command for. Defaults to the "{DEFAULT_DB_ALIAS}" database.',
         )
         parser.add_argument(
             '-c', '--close-sessions', action='store_true', dest='close_sessions', default=False,
@@ -77,7 +78,7 @@ class Command(BaseCommand):
 
         dbinfo = settings.DATABASES.get(database)
         if dbinfo is None:
-            raise CommandError("Unknown database %s" % database)
+            raise CommandError(f"Unknown database {database}")
 
         engine = dbinfo.get('ENGINE')
 
@@ -133,9 +134,9 @@ Type 'yes' to continue, or 'no' to cancel: """ % (database_name,))
                 kwargs['port'] = int(database_port)
 
             connection = Database.connect(**kwargs)
-            drop_query = 'DROP DATABASE IF EXISTS `%s`' % database_name
+            drop_query = f'DROP DATABASE IF EXISTS `{database_name}`'
             utf8_support = '' if options['no_utf8_support'] else 'CHARACTER SET utf8'
-            create_query = 'CREATE DATABASE `%s` %s' % (database_name, utf8_support)
+            create_query = f'CREATE DATABASE `{database_name}` {utf8_support}'
             logging.info('Executing... "%s"', drop_query)
             connection.query(drop_query)
             logging.info('Executing... "%s"', create_query)
@@ -182,14 +183,14 @@ Type 'yes' to continue, or 'no' to cancel: """ % (database_name,))
             create_query += " ENCODING = 'UTF8'"
 
             if settings.DEFAULT_TABLESPACE:
-                create_query += ' TABLESPACE = %s;' % settings.DEFAULT_TABLESPACE
+                create_query += f' TABLESPACE = {settings.DEFAULT_TABLESPACE};'
             else:
                 create_query += ';'
 
             logging.info('Executing... "%s"', create_query)
             cursor.execute(create_query)
         else:
-            raise CommandError("Unknown database engine %s" % engine)
+            raise CommandError(f"Unknown database engine {engine}")
 
         if verbosity >= 2 or options['interactive']:
             print("Reset successful.")

@@ -42,10 +42,7 @@ try:
             from pip._internal.metadata import get_default_environment, get_environment
             from pip._internal.metadata.pkg_resources import Distribution as _Dist
 
-            if paths is None:
-                env = get_default_environment()
-            else:
-                env = get_environment(paths)
+            env = get_default_environment() if paths is None else get_environment(paths)
             dists = env.iter_installed_distributions(
                 local_only=local_only,
                 include_editables=include_editables,
@@ -154,8 +151,9 @@ class Command(BaseCommand):
 
     def _available_version(self, dist_version, available):
         if self._is_stable(dist_version):
-            stable = [v for v in available if self._is_stable(LooseVersion(v))]
-            if stable:
+            if stable := [
+                v for v in available if self._is_stable(LooseVersion(v))
+            ]:
                 return LooseVersion(stable[0])
 
         return LooseVersion(available[0]) if available else None
